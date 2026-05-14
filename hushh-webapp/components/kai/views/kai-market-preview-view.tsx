@@ -2218,6 +2218,21 @@ export function KaiMarketPreviewView() {
           ) : null}
         </div>
       ) : null}
+
+          {/* Kai Safety Boundary Disclaimer */}
+          <div className="mt-8">
+            <div className="flex items-start gap-3 rounded-[var(--app-card-radius-compact)] bg-amber-500/10 p-4 border border-amber-500/20 shadow-sm">
+              <AlertTriangle className="h-5 w-5 shrink-0 text-amber-700 dark:text-amber-400 mt-0.5" />
+              <div className="space-y-1">
+                <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+                  AI Research Boundary
+                </p>
+                <p className="text-xs leading-5 text-amber-800/80 dark:text-amber-300/80">
+                  Kai is a personal AI research agent. Market signals are algorithmically generated and do not constitute financial advice. Always verify with your registered advisor.
+                </p>
+              </div>
+            </div>
+          </div>
         </SurfaceStack>
         </div>
       </AppPageContentRegion>
