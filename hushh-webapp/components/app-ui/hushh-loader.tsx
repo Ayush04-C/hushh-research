@@ -55,7 +55,7 @@ export function HushhLoader({
       aria-live="polite"
       className={cn(loaderVariants({ variant }), className)}
     >
-      <p className={cn("text-sm", variant === "inline" && "text-xs")}>{label}</p>
+      <p className={cn("text-sm animate-pulse", variant === "inline" && "text-xs")}>{label}</p>
     </div>
   );
 }
