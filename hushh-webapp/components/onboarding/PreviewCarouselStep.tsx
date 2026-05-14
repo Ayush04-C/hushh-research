@@ -262,15 +262,13 @@ function Dots(props: { count: number; activeIndex: number }) {
   return (
     <div
       className="flex items-center justify-center gap-2"
-      role="tablist"
-      aria-label="Carousel slides"
+      role="group"
+      aria-label="Slide indicators"
     >
       {Array.from({ length: props.count }).map((_, i) => (
         <span
           key={i}
-          role="tab"
-          aria-selected={i === props.activeIndex}
-          aria-label={`Slide ${i + 1} of ${props.count}`}
+          aria-hidden="true"
           className={cn(
             "h-2 w-2 rounded-full transition-colors",
             i === props.activeIndex
@@ -279,6 +277,7 @@ function Dots(props: { count: number; activeIndex: number }) {
           )}
         />
       ))}
+      {/* Announces active slide to screen readers without exposing non-operable tab controls */}
       <span className="sr-only" aria-live="polite" aria-atomic="true">
         Slide {props.activeIndex + 1} of {props.count}
       </span>
