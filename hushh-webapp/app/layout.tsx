@@ -30,7 +30,10 @@ const gtmContainerId = resolveGtmContainerId();
 const analyticsMeasurementId = resolveAnalyticsMeasurementId();
 
 export const metadata: Metadata = {
-  title: "One: Your Personal Agent",
+  title: {
+    default: "One: Your Personal Agent",
+    template: "%s · Hussh",
+  },
   description:
     "Personal AI agents with consent at the core. Your data, your control.",
   keywords: ["AI agents", "personal AI", "One", "consent-first", "privacy"],
