@@ -34,7 +34,7 @@ const loadWebAnalyticsScripts = shouldLoadWebAnalyticsScripts();
 
 export const metadata: Metadata = {
   title: {
-    default: "One: Your Personal Agent",
+    default: "One | Your Personal Agent",
     template: "%s · Hussh",
   },
   description:
