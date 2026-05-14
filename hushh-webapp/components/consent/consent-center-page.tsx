@@ -56,6 +56,7 @@ import {
 import { CACHE_KEYS } from "@/lib/services/cache-service";
 import { useStaleResource } from "@/lib/cache/use-stale-resource";
 import { Button } from "@/lib/morphy-ux/button";
+import { Card } from "@/lib/morphy-ux/card";
 import { buildRiaClientWorkspaceRoute, ROUTES } from "@/lib/navigation/routes";
 import { cn } from "@/lib/utils";
 import {
@@ -1083,14 +1084,26 @@ export function ConsentCenterPage() {
                     </div>
                   ) : null}
                   {!listResource.loading && !showFullRetryState && tab !== "relationships" && items.length === 0 ? (
-                    <div className="px-3 py-8 text-sm text-muted-foreground">
-                      No {tab} entries match this view right now.
-                    </div>
+                    <Card preset="default" effect="glass" className="mx-3 my-6 flex flex-col items-center justify-center p-8 text-center">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[color:var(--app-card-surface-compact)] border border-[color:var(--app-card-border-standard)] mb-4 text-[color:var(--brand-600)]">
+                        <ShieldCheck className="h-6 w-6" />
+                      </div>
+                      <p className="text-[15px] font-semibold tracking-tight text-foreground">Your vault is secure</p>
+                      <p className="mt-1 max-w-sm text-sm text-muted-foreground">
+                        No {tab} match this view. No data is currently shared in this scope. Consent is the key boundary.
+                      </p>
+                    </Card>
                   ) : null}
                   {!centerResource.loading && !showFullRetryState && tab === "relationships" && items.length === 0 ? (
-                    <div className="px-3 py-8 text-sm text-muted-foreground">
-                      No relationship entries match this view right now.
-                    </div>
+                    <Card preset="default" effect="glass" className="mx-3 my-6 flex flex-col items-center justify-center p-8 text-center">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[color:var(--app-card-surface-compact)] border border-[color:var(--app-card-border-standard)] mb-4 text-[color:var(--brand-600)]">
+                        <ShieldCheck className="h-6 w-6" />
+                      </div>
+                      <p className="text-[15px] font-semibold tracking-tight text-foreground">No active relationships</p>
+                      <p className="mt-1 max-w-sm text-sm text-muted-foreground">
+                        You have no consent relationships. Your vault remains locked down.
+                      </p>
+                    </Card>
                   ) : null}
                   {tab === "history" && items.length > 0 ? (
                     <ConsentAuditTimeline
