@@ -198,8 +198,8 @@ export function VaultLockGuard({ children }: VaultLockGuardProps) {
       open
       dismissible={false}
       enableGeneratedDefault
-      title="Unlock Vault"
-      description="Unlock your Vault to continue."
+      title="Decrypt infrastructure"
+      description="Decrypt your personal AI infrastructure and unlock your Vault to continue."
       onSuccess={() => undefined}
     />
   );
