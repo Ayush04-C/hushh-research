@@ -260,19 +260,28 @@ export function PreviewCarouselStep({ onContinue }: { onContinue: () => void }) 
 
 function Dots(props: { count: number; activeIndex: number }) {
   return (
-    <div className="flex items-center justify-center gap-2">
+    <div
+      className="flex items-center justify-center gap-2"
+      role="tablist"
+      aria-label="Carousel slides"
+    >
       {Array.from({ length: props.count }).map((_, i) => (
         <span
           key={i}
+          role="tab"
+          aria-selected={i === props.activeIndex}
+          aria-label={`Slide ${i + 1} of ${props.count}`}
           className={cn(
             "h-2 w-2 rounded-full transition-colors",
             i === props.activeIndex
               ? "bg-[var(--morphy-primary-start)]"
               : "bg-[var(--morphy-primary-start)]/20"
           )}
-          aria-hidden
         />
       ))}
+      <span className="sr-only" aria-live="polite" aria-atomic="true">
+        Slide {props.activeIndex + 1} of {props.count}
+      </span>
     </div>
   );
 }
