@@ -31,10 +31,14 @@ const gtmContainerId = resolveGtmContainerId();
 const analyticsMeasurementId = resolveAnalyticsMeasurementId();
 
 export const metadata: Metadata = {
-  title: "One | Your Personal Agent",
+  metadataBase: new URL("https://hushh.ai"),
+  title: {
+    template: "%s · Hussh",
+    default: "One: Your Personal Agent",
+  },
   description:
     "Personal AI agents with consent at the core. Your data, your control.",
-  keywords: ["AI agents", "personal AI", "One", "consent-first", "privacy"],
+  keywords: ["AI agents", "personal AI", "One", "consent-first", "privacy", "finance", "security"],
   authors: [{ name: "Hussh Labs" }],
   icons: {
     icon: [
@@ -50,6 +54,22 @@ export const metadata: Metadata = {
     title: "One | Your Personal Agent",
     description: "Personal AI agents with consent at the core.",
     type: "website",
+    siteName: "Hussh",
+    url: "https://hushh.ai",
+    images: [
+      {
+        url: "/quiet-emoji-icon.png",
+        width: 512,
+        height: 512,
+        alt: "Hussh One Agent",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "One: Your Personal Agent",
+    description: "Personal AI agents with consent at the core.",
+    images: ["/quiet-emoji-icon.png"],
   },
 };
 
