@@ -10,6 +10,7 @@ import {
 
 import { PopupTextEditorField } from "@/components/app-ui/command-fields";
 import {
+  SettingsEmptyState,
   SettingsGroup,
   SettingsRow,
   SettingsSegmentedTabs,
@@ -603,9 +604,9 @@ export function RiaClientWorkspace({
                 </div>
                 <SettingsGroup embedded>
                   {activeAccountBranches.length === 0 ? (
-                    <div className="px-4 py-4 text-sm text-muted-foreground">
-                      No linked accounts discovered yet.
-                    </div>
+                    <SettingsEmptyState
+                      title="No linked accounts discovered yet."
+                    />
                   ) : (
                     activeAccountBranches.map((branch) => (
                       <SettingsRow
@@ -648,7 +649,9 @@ export function RiaClientWorkspace({
                 </div>
                 <SettingsGroup embedded>
                   {detail.granted_scopes.length === 0 ? (
-                    <div className="px-4 py-4 text-sm text-muted-foreground">No active sharing yet.</div>
+                    <SettingsEmptyState
+                      title="No active sharing yet."
+                    />
                   ) : (
                     detail.granted_scopes.map((scope) => (
                       <SettingsRow
@@ -757,9 +760,9 @@ export function RiaClientWorkspace({
                     {activeTemplate?.requires_account_selection ? (
                       <SettingsGroup embedded title="Choose accounts">
                         {activeAccountBranches.length === 0 ? (
-                          <div className="px-4 py-4 text-sm text-muted-foreground">
-                            No linked accounts are available for account-level approval yet.
-                          </div>
+                          <SettingsEmptyState
+                            title="No linked accounts are available for account-level approval yet."
+                          />
                         ) : (
                           activeAccountBranches.map((branch) => {
                             const checked = selectedAccountIds.includes(branch.branch_id);
@@ -919,9 +922,9 @@ export function RiaClientWorkspace({
                     </div>
                     <SettingsGroup embedded>
                       {workspace.available_domains.length === 0 ? (
-                        <div className="px-4 py-4 text-sm text-muted-foreground">
-                          No indexed domains are ready yet.
-                        </div>
+                        <SettingsEmptyState
+                          title="No indexed domains are ready yet."
+                        />
                       ) : (
                         workspace.available_domains.map((domain) => (
                           <SettingsRow
@@ -944,9 +947,9 @@ export function RiaClientWorkspace({
                     </div>
                     <SettingsGroup embedded>
                       {activeAccountBranches.length === 0 ? (
-                        <div className="px-4 py-4 text-sm text-muted-foreground">
-                          No linked accounts discovered yet.
-                        </div>
+                        <SettingsEmptyState
+                          title="No linked accounts discovered yet."
+                        />
                       ) : (
                         activeAccountBranches.map((branch) => (
                           <SettingsRow

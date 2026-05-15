@@ -20,6 +20,7 @@ import { PaginatedListFooter } from "@/components/app-ui/paginated-list-footer";
 import { SurfaceStack } from "@/components/app-ui/surfaces";
 import {
   SettingsDetailPanel,
+  SettingsEmptyState,
   SettingsGroup,
   SettingsRow,
   SettingsSegmentedTabs,
@@ -388,7 +389,7 @@ function ConsentEntryDetail({
         title="Select a request"
         description="Choose an item from the list to review its details and available actions."
       >
-        <SettingsRow title="Nothing selected yet" description="Pending, active, and previous items open here." />
+        <SettingsEmptyState title="Nothing selected yet" description="Pending, active, and previous items open here." />
       </SettingsGroup>
     );
   }
@@ -1083,14 +1084,14 @@ export function ConsentCenterPage() {
                     </div>
                   ) : null}
                   {!listResource.loading && !showFullRetryState && tab !== "relationships" && items.length === 0 ? (
-                    <div className="px-3 py-8 text-sm text-muted-foreground">
-                      No {tab} entries match this view right now.
-                    </div>
+                    <SettingsEmptyState
+                      title={`No ${tab} entries match this view right now.`}
+                    />
                   ) : null}
                   {!centerResource.loading && !showFullRetryState && tab === "relationships" && items.length === 0 ? (
-                    <div className="px-3 py-8 text-sm text-muted-foreground">
-                      No relationship entries match this view right now.
-                    </div>
+                    <SettingsEmptyState
+                      title="No relationship entries match this view right now."
+                    />
                   ) : null}
                   {tab === "history" && items.length > 0 ? (
                     <ConsentAuditTimeline

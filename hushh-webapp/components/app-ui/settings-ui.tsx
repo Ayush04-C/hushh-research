@@ -143,6 +143,25 @@ export function SettingsGroup({
   );
 }
 
+export function SettingsEmptyState({
+  title,
+  description,
+  className,
+}: {
+  title: ReactNode;
+  description?: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={cn("px-4 py-4 text-sm text-muted-foreground", className)}>
+      {title}
+      {description ? (
+        <div className="mt-1">{description}</div>
+      ) : null}
+    </div>
+  );
+}
+
 export function SettingsRow({
   asChild = false,
   children,

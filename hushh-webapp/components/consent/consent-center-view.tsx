@@ -52,6 +52,7 @@ import {
 } from "@/components/ui/select";
 import { PageHeader, SectionHeader, ContentSurface } from "@/components/app-ui/page-sections";
 import { SurfaceInset, SurfaceStack } from "@/components/app-ui/surfaces";
+import { SettingsEmptyState } from "@/components/profile/settings-ui";
 import { useConsentNotificationState } from "@/components/consent/notification-provider";
 import { Icon } from "@/lib/morphy-ux/ui";
 import { SegmentedPill, type SegmentedPillOption } from "@/lib/morphy-ux/ui";
@@ -1266,9 +1267,9 @@ export function ConsentCenterView({
           {error ? <p className="px-5 py-6 text-sm text-red-500">{error}</p> : null}
 
           {!loading && !error && !hasVisibleEntries ? (
-            <div className="px-5 py-8 text-sm text-muted-foreground">
-              {emptyStateCopy(actor, surfaceView)}
-            </div>
+            <SettingsEmptyState
+              title={emptyStateCopy(actor, surfaceView)}
+            />
           ) : null}
 
           {!loading && !error && hasVisibleEntries ? (
