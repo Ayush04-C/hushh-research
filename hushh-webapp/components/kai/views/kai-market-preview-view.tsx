@@ -24,7 +24,6 @@ import { KaiControlSurface } from "@/components/app-ui/kai-control-surface";
 import {
   SurfaceCard,
   SurfaceCardContent,
-  SurfaceCardDescription,
   SurfaceCardHeader,
   SurfaceInset,
   SurfaceStack,
