@@ -26,6 +26,7 @@ import {
   buildRiaConsentManagerHref,
 } from "@/lib/consent/consent-sheet-route";
 import { resolveConsentRequesterLabel } from "@/lib/consent/consent-display";
+import { formatConsentExpiryCountdown } from "@/lib/consent/consent-time";
 import { Button } from "@/lib/morphy-ux/button";
 import { usePersonaState } from "@/lib/persona/persona-context";
 import {
@@ -54,19 +55,6 @@ function entryLabel(entry: ConsentCenterEntry) {
     counterpartSecondaryLabel: entry.counterpart_secondary_label,
     counterpartId: entry.counterpart_id,
   });
-}
-
-function formatRelative(value?: string | number | null) {
-  if (!value) return null;
-  const timestamp = new Date(value).getTime();
-  if (!Number.isFinite(timestamp)) return null;
-  const deltaMs = timestamp - Date.now();
-  if (deltaMs <= 0) return "Expired";
-  const totalMinutes = Math.ceil(deltaMs / (60 * 1000));
-  if (totalMinutes < 60) return `${totalMinutes} min left`;
-  const totalHours = Math.ceil(totalMinutes / 60);
-  if (totalHours < 48) return `${totalHours} hr left`;
-  return `${Math.ceil(totalHours / 24)} days left`;
 }
 
 function entryHref(actor: ConsentCenterActor, entry: ConsentCenterEntry) {
@@ -286,7 +274,7 @@ export function ConsentInboxDropdown({
                       </p>
                     </div>
                     <span className="shrink-0 text-[11px] text-muted-foreground">
-                      {formatRelative(entry.expires_at) ||
+                      {formatConsentExpiryCountdown(entry.expires_at) ||
                         entry.counterpart_email ||
                         entry.counterpart_secondary_label ||
                         ""}

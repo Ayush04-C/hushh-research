@@ -36,6 +36,7 @@ import {
   normalizeConsentSheetView,
   type ConsentSheetView,
 } from "@/lib/consent/consent-sheet-route";
+import { formatConsentExpiryCountdown } from "@/lib/consent/consent-time";
 import { Button } from "@/lib/morphy-ux/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -102,13 +103,6 @@ function formatDate(value: number | string | null | undefined) {
   return date.toLocaleString();
 }
 
-function toTimestamp(value: number | string | null | undefined) {
-  if (typeof value === "number") return value;
-  if (!value) return null;
-  const parsed = new Date(String(value)).getTime();
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
 function formatDurationLabel(hours: number | null | undefined) {
   if (!hours || !Number.isFinite(hours)) return "24 hours";
   if (hours === 24) return "24 hours";
@@ -117,19 +111,6 @@ function formatDurationLabel(hours: number | null | undefined) {
     return `${days} day${days === 1 ? "" : "s"}`;
   }
   return `${hours} hour${hours === 1 ? "" : "s"}`;
-}
-
-function formatRelativeCountdown(value: number | string | null | undefined) {
-  const timestamp = toTimestamp(value);
-  if (!timestamp) return null;
-  const deltaMs = timestamp - Date.now();
-  if (deltaMs <= 0) return "Expired";
-  const totalMinutes = Math.ceil(deltaMs / (60 * 1000));
-  if (totalMinutes < 60) return `${totalMinutes} min left`;
-  const totalHours = Math.ceil(totalMinutes / 60);
-  if (totalHours < 48) return `${totalHours} hr left`;
-  const totalDays = Math.ceil(totalHours / 24);
-  return `${totalDays} day${totalDays === 1 ? "" : "s"} left`;
 }
 
 function resolveRequesterImage(
@@ -608,8 +589,9 @@ export function ConsentCenterView({
     const bundleReason =
       bundle.entries[0]?.reason ||
       (typeof bundleMetadata.reason === "string" ? bundleMetadata.reason : undefined);
-    const requestExpiry = formatRelativeCountdown(
-      bundle.entries[0]?.approval_timeout_at || bundle.entries[0]?.expires_at
+    const requestExpiry = formatConsentExpiryCountdown(
+      bundle.entries[0]?.approval_timeout_at || bundle.entries[0]?.expires_at,
+      { allowSingularDay: true }
     );
     const isFocused = Boolean(focusedBundleId && focusedBundleId === bundle.bundleId);
 
@@ -870,8 +852,9 @@ export function ConsentCenterView({
       entry.counterpart_image_url,
       entry.counterpart_website_url
     );
-    const requestCountdown = formatRelativeCountdown(
-      entry.approval_timeout_at || entry.expires_at
+    const requestCountdown = formatConsentExpiryCountdown(
+      entry.approval_timeout_at || entry.expires_at,
+      { allowSingularDay: true }
     );
     const requestedDurationLabel = formatDurationLabel(
       typeof metadata.expiry_hours === "number" ? metadata.expiry_hours : undefined

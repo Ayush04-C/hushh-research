@@ -41,6 +41,7 @@ import {
   resolveConsentRequesterLabel,
   resolveConsentSupportingCopy,
 } from "@/lib/consent/consent-display";
+import { formatConsentExpiryCountdown } from "@/lib/consent/consent-time";
 import { normalizeInternalAppHref } from "@/lib/consent/consent-sheet-route";
 import { usePersonaState } from "@/lib/persona/persona-context";
 import {
@@ -117,19 +118,6 @@ function formatDate(value?: string | number | null) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return null;
   return date.toLocaleString();
-}
-
-function formatRelative(value?: string | number | null) {
-  if (!value) return null;
-  const timestamp = new Date(value).getTime();
-  if (!Number.isFinite(timestamp)) return null;
-  const deltaMs = timestamp - Date.now();
-  if (deltaMs <= 0) return "Expired";
-  const totalMinutes = Math.ceil(deltaMs / (60 * 1000));
-  if (totalMinutes < 60) return `${totalMinutes} min left`;
-  const totalHours = Math.ceil(totalMinutes / 60);
-  if (totalHours < 48) return `${totalHours} hr left`;
-  return `${Math.ceil(totalHours / 24)} days left`;
 }
 
 function badgeClassName(status?: string | null) {
@@ -360,7 +348,9 @@ function ConsentEntryRow({
       <p className="mt-3 line-clamp-2 text-sm leading-6 text-foreground/80">{entrySummary(entry)}</p>
       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
         {entry.scope ? <span>{entry.scope_description || entry.scope}</span> : null}
-        {entry.expires_at ? <span>{formatRelative(entry.expires_at)}</span> : null}
+        {entry.expires_at ? (
+          <span>{formatConsentExpiryCountdown(entry.expires_at)}</span>
+        ) : null}
         {entry.issued_at ? <span>{formatDate(entry.issued_at)}</span> : null}
       </div>
       <MaterialRipple variant="none" effect="fade" className="z-0" />
@@ -428,7 +418,9 @@ function ConsentEntryDetail({
         <SettingsRow
           title="Expires"
           description={
-            formatDate(entry.expires_at) || formatRelative(entry.expires_at) || "No expiry"
+            formatDate(entry.expires_at) ||
+            formatConsentExpiryCountdown(entry.expires_at) ||
+            "No expiry"
           }
         />
         {entry.reason ? <SettingsRow title="Reason" description={entry.reason} /> : null}
