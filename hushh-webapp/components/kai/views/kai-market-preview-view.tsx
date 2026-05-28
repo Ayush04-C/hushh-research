@@ -820,46 +820,15 @@ function SpotlightFeatureTile({
   );
 }
 
-function getNewsSummarySnippet(title: string, symbol: string, source: string): string {
-  return `Kai analysis indicates ${symbol} is experiencing elevated discussion volume driven by recent coverage from ${source}. The sentiment surrounding "${title.length > 35 ? title.substring(0, 35) + '...' : title}" suggests potential volatility in the upcoming sessions as the market digests this catalyst. Further monitoring is advised.`;
-}
-
-export function MarketHeadlinesRail({
-  items,
-  isLoading,
-  error,
-}: {
-  items?: KaiHomeNewsItem[] | null;
-  isLoading?: boolean;
-  error?: string | null;
-}) {
-  const rows = items || [];
-
-  if (isLoading) {
+export function MarketHeadlinesRail({ rows }: { rows: KaiHomeNewsItem[] }) {
+  if (!rows.length) {
     return (
       <SurfaceCard className={cn("h-full", marketCardClassName)}>
-        <SurfaceCardHeader className="flex flex-row items-center justify-between pb-4">
-          <div className="space-y-1">
-            <SurfaceCardTitle className="text-[14px] uppercase tracking-wider text-muted-foreground">
-              Latest coverage
-            </SurfaceCardTitle>
-            <h3 className="text-[18px] font-bold tracking-tight text-foreground">
-              Fast reads from the tape
-            </h3>
-          </div>
-        </SurfaceCardHeader>
-        <SurfaceCardContent className="flex min-h-[240px] items-center justify-center p-0">
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            <span className="text-sm">Scanning headlines...</span>
-          </div>
+        <SurfaceCardContent className="flex h-full min-h-[240px] items-center justify-center p-5 text-sm text-muted-foreground">
+          No recent market headlines are available right now.
         </SurfaceCardContent>
       </SurfaceCard>
     );
-  }
-
-  if (error || rows.length === 0) {
-    return null; // Silent degrade
   }
 
   return (
@@ -921,13 +890,21 @@ export function MarketHeadlinesRail({
                       {row.source_name} · {formatHeadlinePublished(row.published_at)}
                     </p>
                   </div>
-                  <div className="text-xs leading-relaxed text-muted-foreground">
-                    {row.sentiment_hint || getNewsSummarySnippet(row.title, row.symbol, row.source_name)}
-                  </div>
-                  <div className="flex items-center gap-1.5 pt-2 border-t border-[color:var(--app-card-border-standard)]">
-                    <Zap className="h-3 w-3 text-amber-500" />
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Kai quick scan</span>
-                  </div>
+                  {row.sentiment_hint ? (
+                    <>
+                      <div className="text-xs leading-relaxed text-muted-foreground">
+                        {row.sentiment_hint}
+                      </div>
+                      <div className="flex items-center gap-1.5 pt-2 border-t border-[color:var(--app-card-border-standard)]">
+                        <Zap className="h-3 w-3 text-amber-500" />
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Kai quick scan</span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-xs italic text-muted-foreground">
+                      No analysis available for this headline.
+                    </div>
+                  )}
                 </HoverCardContent>
               </HoverCard>
             ))}
@@ -2398,7 +2375,7 @@ export function KaiMarketPreviewView() {
                   Spotlight names are loading right now.
                 </div>
               )}
-              <MarketHeadlinesRail items={effectivePayload?.news_tape || []} />
+              <MarketHeadlinesRail rows={effectivePayload?.news_tape || []} />
             </div>
           </section>
 
