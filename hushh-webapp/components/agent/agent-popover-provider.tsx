@@ -18,7 +18,7 @@ import gsap from "gsap";
 import { AgentChatWorkspace } from "@/components/agent/agent-chat-workspace";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
-import { ROUTES } from "@/lib/navigation/routes";
+import { ROUTES, isRiaActionBarRoute } from "@/lib/navigation/routes";
 import { cn } from "@/lib/utils";
 
 type AgentPopoverContextValue = {
@@ -124,6 +124,7 @@ function AgentPopoverSurface() {
     useAgentPopover();
   const isLegacyAgentRoute = pathname === ROUTES.AGENT;
   const canShowAgent = isAuthenticated && !isLegacyAgentRoute;
+  const useRiaActionBarTrigger = isRiaActionBarRoute(pathname);
   const isCollapsing = motionState === "closing";
   const surfaceVisible = expanded || motionState !== "idle";
 
@@ -237,28 +238,30 @@ function AgentPopoverSurface() {
         </div>
       ) : null}
 
-      <Button
-        ref={triggerRef}
-        type="button"
-        variant="secondary"
-        className={cn(
-          "fixed right-4 z-[130] h-11 gap-2 rounded-full border border-border/70 bg-background/90 px-4 shadow-lg backdrop-blur-md transition-[box-shadow,opacity,transform] duration-300 ease-out motion-reduce:transform-none motion-reduce:transition-none",
-          expanded && !isCollapsing
-            ? "pointer-events-none translate-y-3 scale-95 opacity-0"
-            : "translate-y-0 scale-100 opacity-100",
-          isCollapsing && "ring-1 ring-primary/30 shadow-primary/20"
-        )}
-        style={{
-          bottom:
-            "calc(var(--app-bottom-fixed-ui, 76px) + max(var(--app-safe-area-bottom-effective), 0.75rem) + 0.75rem)",
-        }}
-        onClick={openAgent}
-        aria-label="Open Agent"
-        title="Open Agent"
-      >
-        <Bot className="h-4 w-4" />
-        <span className="hidden text-sm font-medium sm:inline">Agent</span>
-      </Button>
+      {!useRiaActionBarTrigger ? (
+        <Button
+          ref={triggerRef}
+          type="button"
+          variant="secondary"
+          className={cn(
+            "fixed right-4 z-[130] h-11 gap-2 rounded-full border border-border/70 bg-background/90 px-4 shadow-lg backdrop-blur-md transition-[box-shadow,opacity,transform] duration-300 ease-out motion-reduce:transform-none motion-reduce:transition-none",
+            expanded && !isCollapsing
+              ? "pointer-events-none translate-y-3 scale-95 opacity-0"
+              : "translate-y-0 scale-100 opacity-100",
+            isCollapsing && "ring-1 ring-primary/30 shadow-primary/20"
+          )}
+          style={{
+            bottom:
+              "calc(var(--app-bottom-fixed-ui, 76px) + max(var(--app-safe-area-bottom-effective), 0.75rem) + 0.75rem)",
+          }}
+          onClick={openAgent}
+          aria-label="Open Agent"
+          title="Open Agent"
+        >
+          <Bot className="h-4 w-4" />
+          <span className="hidden text-sm font-medium sm:inline">Agent</span>
+        </Button>
+      ) : null}
     </>
   );
 }
