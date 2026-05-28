@@ -2,9 +2,9 @@ import pytest
 
 from hushh_mcp.agents.kai.debate_engine import DebateEngine
 from hushh_mcp.agents.kai.fundamental_agent import FundamentalInsight
+from hushh_mcp.agents.kai.macro_agent import MacroInsight
 from hushh_mcp.agents.kai.sentiment_agent import SentimentInsight
 from hushh_mcp.agents.kai.valuation_agent import ValuationInsight
-from hushh_mcp.agents.kai.macro_agent import MacroInsight
 
 
 def _fundamental(recommendation: str = "buy", confidence: float = 0.5) -> FundamentalInsight:

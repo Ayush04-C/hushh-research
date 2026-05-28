@@ -8,9 +8,9 @@ from python_a2a.server.a2a_server import A2AServer
 from hushh_mcp.adk_bridge.delegation import validate_a2a_consent_token
 from hushh_mcp.agents.kai.debate_engine import DebateEngine
 from hushh_mcp.agents.kai.fundamental_agent import FundamentalAgent
+from hushh_mcp.agents.kai.macro_agent import MacroAgent
 from hushh_mcp.agents.kai.sentiment_agent import SentimentAgent
 from hushh_mcp.agents.kai.valuation_agent import ValuationAgent
-from hushh_mcp.agents.kai.macro_agent import MacroAgent
 from hushh_mcp.hushh_adk.context import HushhContext
 from hushh_mcp.services.consent_db import ConsentDBService
 
@@ -133,12 +133,12 @@ class KaiA2AServer(A2AServer):
             v_task = self.valuation_agent.analyze(
                 ticker=ticker, user_id=user_id, consent_token=token
             )
-            m_task = self.macro_agent.analyze(
-                ticker=ticker, user_id=user_id, consent_token=token
-            )
+            m_task = self.macro_agent.analyze(ticker=ticker, user_id=user_id, consent_token=token)
 
             # Gather results
-            fundamental, sentiment, valuation, macro = await asyncio.gather(f_task, s_task, v_task, m_task)
+            fundamental, sentiment, valuation, macro = await asyncio.gather(
+                f_task, s_task, v_task, m_task
+            )
 
             # 2. Run Debate Orchestration
             logger.info("Starting Debate...")
@@ -147,12 +147,8 @@ class KaiA2AServer(A2AServer):
                 f"**Fundamental**: {fundamental.recommendation} ({fundamental.confidence:.0%})\n"
             )
             acc_text += f"**Sentiment**: {sentiment.recommendation} ({sentiment.confidence:.0%})\n"
-            acc_text += (
-                f"**Valuation**: {valuation.recommendation} ({valuation.confidence:.0%})\n"
-            )
-            acc_text += (
-                f"**Macro**: {macro.recommendation} ({macro.confidence:.0%})\n\n"
-            )
+            acc_text += f"**Valuation**: {valuation.recommendation} ({valuation.confidence:.0%})\n"
+            acc_text += f"**Macro**: {macro.recommendation} ({macro.confidence:.0%})\n\n"
             acc_text += "## Debate Transcript\n\n"
 
             async for event in self.debate_engine.orchestrate_debate_stream(
@@ -171,7 +167,9 @@ class KaiA2AServer(A2AServer):
                     acc_text += event["final_statement"]
 
             # 3. Final Decision Logic
-            result = await self.debate_engine._build_consensus(fundamental, sentiment, valuation, macro)
+            result = await self.debate_engine._build_consensus(
+                fundamental, sentiment, valuation, macro
+            )
             acc_text += f"\n\n## Conclusion\n{result.final_statement}"
 
             return acc_text

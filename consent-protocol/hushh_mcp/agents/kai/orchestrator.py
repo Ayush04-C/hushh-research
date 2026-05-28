@@ -25,9 +25,9 @@ from .config import ANALYSIS_TIMEOUT, ProcessingMode, RiskProfile
 from .debate_engine import DebateEngine
 from .decision_generator import DecisionCard, DecisionGenerator
 from .fundamental_agent import FundamentalAgent
+from .macro_agent import MacroAgent
 from .sentiment_agent import SentimentAgent
 from .valuation_agent import ValuationAgent
-from .macro_agent import MacroAgent
 
 logger = logging.getLogger(__name__)
 
