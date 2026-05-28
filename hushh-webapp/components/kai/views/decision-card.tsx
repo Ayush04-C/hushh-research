@@ -82,7 +82,6 @@ export interface DecisionResult {
       financial_resilience?: string;
       growth_efficiency?: string;
       bull_case?: string;
-      bull_case?: string;
       bear_case?: string;
     };
     macro_insight?: {
