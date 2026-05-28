@@ -385,6 +385,7 @@ class DebateEngine:
             fundamental_insight=fundamental_insight,
             sentiment_insight=sentiment_insight,
             valuation_insight=valuation_insight,
+            macro_insight=macro_insight,
             user_context=user_context,
         ):
             pass
@@ -393,6 +394,7 @@ class DebateEngine:
             fundamental=fundamental_insight,
             sentiment=sentiment_insight,
             valuation=valuation_insight,
+            macro=macro_insight,
         )
 
     async def _stream_agent_turn(
@@ -419,6 +421,7 @@ class DebateEngine:
             "fundamental": "Fundamental Agent",
             "sentiment": "Sentiment Agent",
             "valuation": "Valuation Agent",
+            "macro": "Macro Agent",
         }
         phase = "round2" if round_num == 2 else "round1"
 

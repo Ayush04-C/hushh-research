@@ -10,6 +10,7 @@ from hushh_mcp.agents.kai.debate_engine import DebateEngine
 from hushh_mcp.agents.kai.fundamental_agent import FundamentalAgent
 from hushh_mcp.agents.kai.sentiment_agent import SentimentAgent
 from hushh_mcp.agents.kai.valuation_agent import ValuationAgent
+from hushh_mcp.agents.kai.macro_agent import MacroAgent
 from hushh_mcp.hushh_adk.context import HushhContext
 from hushh_mcp.services.consent_db import ConsentDBService
 
@@ -31,6 +32,7 @@ class KaiA2AServer(A2AServer):
         self.fundamental_agent = FundamentalAgent(processing_mode="hybrid")
         self.sentiment_agent = SentimentAgent(processing_mode="hybrid")
         self.valuation_agent = ValuationAgent(processing_mode="hybrid")
+        self.macro_agent = MacroAgent(processing_mode="hybrid")
 
         # Initialize Parent A2AServer
         super().__init__(**kwargs)
@@ -131,9 +133,12 @@ class KaiA2AServer(A2AServer):
             v_task = self.valuation_agent.analyze(
                 ticker=ticker, user_id=user_id, consent_token=token
             )
+            m_task = self.macro_agent.analyze(
+                ticker=ticker, user_id=user_id, consent_token=token
+            )
 
             # Gather results
-            fundamental, sentiment, valuation = await asyncio.gather(f_task, s_task, v_task)
+            fundamental, sentiment, valuation, macro = await asyncio.gather(f_task, s_task, v_task, m_task)
 
             # 2. Run Debate Orchestration
             logger.info("Starting Debate...")
@@ -143,7 +148,10 @@ class KaiA2AServer(A2AServer):
             )
             acc_text += f"**Sentiment**: {sentiment.recommendation} ({sentiment.confidence:.0%})\n"
             acc_text += (
-                f"**Valuation**: {valuation.recommendation} ({valuation.confidence:.0%})\n\n"
+                f"**Valuation**: {valuation.recommendation} ({valuation.confidence:.0%})\n"
+            )
+            acc_text += (
+                f"**Macro**: {macro.recommendation} ({macro.confidence:.0%})\n\n"
             )
             acc_text += "## Debate Transcript\n\n"
 
@@ -151,6 +159,7 @@ class KaiA2AServer(A2AServer):
                 fundamental_insight=fundamental,
                 sentiment_insight=sentiment,
                 valuation_insight=valuation,
+                macro_insight=macro,
             ):
                 if event["event"] == "agent_token":
                     pass
@@ -162,7 +171,7 @@ class KaiA2AServer(A2AServer):
                     acc_text += event["final_statement"]
 
             # 3. Final Decision Logic
-            result = await self.debate_engine._build_consensus(fundamental, sentiment, valuation)
+            result = await self.debate_engine._build_consensus(fundamental, sentiment, valuation, macro)
             acc_text += f"\n\n## Conclusion\n{result.final_statement}"
 
             return acc_text

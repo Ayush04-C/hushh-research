@@ -4,6 +4,7 @@ from hushh_mcp.agents.kai.debate_engine import DebateEngine
 from hushh_mcp.agents.kai.fundamental_agent import FundamentalInsight
 from hushh_mcp.agents.kai.sentiment_agent import SentimentInsight
 from hushh_mcp.agents.kai.valuation_agent import ValuationInsight
+from hushh_mcp.agents.kai.macro_agent import MacroInsight
 
 
 def _fundamental(recommendation: str = "buy", confidence: float = 0.5) -> FundamentalInsight:
@@ -46,6 +47,20 @@ def _valuation(recommendation: str = "overvalued", confidence: float = 0.5) -> V
     )
 
 
+def _macro(recommendation: str = "buy", confidence: float = 0.5) -> MacroInsight:
+    return MacroInsight(
+        summary="Sector trends and interest rates align for growth.",
+        interest_rate_impact="neutral",
+        inflation_impact="positive",
+        sector_trend="growing",
+        macro_bull_case="easing policy",
+        macro_bear_case="sticky inflation",
+        sources=["macro"],
+        confidence=confidence,
+        recommendation=recommendation,
+    )
+
+
 @pytest.mark.asyncio
 async def test_low_confidence_conflict_adds_deterministic_summary_without_boosting_confidence(
     monkeypatch,
@@ -63,6 +78,7 @@ async def test_low_confidence_conflict_adds_deterministic_summary_without_boosti
         _fundamental(),
         _sentiment(),
         _valuation(),
+        _macro(),
     )
 
     assert result.consensus_reached is False

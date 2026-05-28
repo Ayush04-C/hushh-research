@@ -343,9 +343,9 @@ export class PersonalKnowledgeModelService {
         }
         const location = Array.isArray(entry.loc)
           ? entry.loc
-              .map((part) => String(part ?? "").trim())
-              .filter(Boolean)
-              .join(".")
+            .map((part) => String(part ?? "").trim())
+            .filter(Boolean)
+            .join(".")
           : null;
         const message = typeof entry.msg === "string" ? entry.msg.trim() : null;
         if (location && message) {
@@ -976,8 +976,8 @@ export class PersonalKnowledgeModelService {
 
     const canonicalPortfolio =
       financial.portfolio &&
-      typeof financial.portfolio === "object" &&
-      !Array.isArray(financial.portfolio)
+        typeof financial.portfolio === "object" &&
+        !Array.isArray(financial.portfolio)
         ? (financial.portfolio as Record<string, unknown>)
         : null;
 
@@ -997,10 +997,10 @@ export class PersonalKnowledgeModelService {
       const holding = row as Record<string, unknown>;
       const symbol = this.normalizeHoldingSymbolCandidate(
         holding.symbol ??
-          holding.ticker ??
-          holding.ticker_symbol ??
-          holding.display_ticker ??
-          holding.security_symbol
+        holding.ticker ??
+        holding.ticker_symbol ??
+        holding.display_ticker ??
+        holding.security_symbol
       );
       if (!symbol) continue;
       out.push({
@@ -1224,7 +1224,7 @@ export class PersonalKnowledgeModelService {
           userId,
           vaultOwnerToken: this.getVaultOwnerToken(metadataToken),
         });
-         
+
         const raw = nativeResult as any;
         result = {
           userId: raw.user_id || raw.userId || userId,
@@ -1251,8 +1251,8 @@ export class PersonalKnowledgeModelService {
               null) as string | null,
             domainContractVersion: Number(
               d.domain_contract_version ??
-                d.domainContractVersion ??
-                currentDomainContractVersion(String(d.domain_key || d.key || ""))
+              d.domainContractVersion ??
+              currentDomainContractVersion(String(d.domain_key || d.key || ""))
             ),
             readableSummaryVersion: Number(
               d.readable_summary_version ?? d.readableSummaryVersion ?? 0
@@ -1291,30 +1291,30 @@ export class PersonalKnowledgeModelService {
           upgradeStatus: raw.upgrade_status || raw.upgradeStatus || "current",
           upgradableDomains: Array.isArray(raw.upgradable_domains || raw.upgradableDomains)
             ? ((raw.upgradable_domains || raw.upgradableDomains) as Array<Record<string, unknown>>).map(
-                (domain) => {
-                  const capabilities = domain.capabilities_applied || domain.capabilitiesApplied;
-                  const blockers = domain.blocked_reasons || domain.blockedReasons;
-                  return {
+              (domain) => {
+                const capabilities = domain.capabilities_applied || domain.capabilitiesApplied;
+                const blockers = domain.blocked_reasons || domain.blockedReasons;
+                return {
                   domain: String(domain.domain || ""),
                   currentDomainContractVersion: Number(
                     domain.current_domain_contract_version ??
-                      domain.currentDomainContractVersion ??
-                      1
+                    domain.currentDomainContractVersion ??
+                    1
                   ),
                   targetDomainContractVersion: Number(
                     domain.target_domain_contract_version ??
-                      domain.targetDomainContractVersion ??
-                      1
+                    domain.targetDomainContractVersion ??
+                    1
                   ),
                   currentReadableSummaryVersion: Number(
                     domain.current_readable_summary_version ??
-                      domain.currentReadableSummaryVersion ??
-                      0
+                    domain.currentReadableSummaryVersion ??
+                    0
                   ),
                   targetReadableSummaryVersion: Number(
                     domain.target_readable_summary_version ??
-                      domain.targetReadableSummaryVersion ??
-                      CURRENT_READABLE_SUMMARY_VERSION
+                    domain.targetReadableSummaryVersion ??
+                    CURRENT_READABLE_SUMMARY_VERSION
                   ),
                   currentPkmContractVersion:
                     (domain.current_pkm_contract_version ||
@@ -1337,8 +1337,8 @@ export class PersonalKnowledgeModelService {
                   upgradedAt: (domain.upgraded_at || domain.upgradedAt || null) as string | null,
                   needsUpgrade: Boolean(domain.needs_upgrade ?? domain.needsUpgrade),
                 };
-                }
-              )
+              }
+            )
             : [],
           lastUpgradedAt:
             (raw.last_upgraded_at || raw.lastUpgradedAt || null) as string | null,
@@ -1423,7 +1423,7 @@ export class PersonalKnowledgeModelService {
               readableSourceLabel: (d.readable_source_label || null) as string | null,
               domainContractVersion: Number(
                 d.domain_contract_version ??
-                  currentDomainContractVersion(String(d.domain_key || d.key || ""))
+                currentDomainContractVersion(String(d.domain_key || d.key || ""))
               ),
               readableSummaryVersion: Number(d.readable_summary_version ?? 0),
               upgradedAt: (d.upgraded_at || null) as string | null,
@@ -1449,9 +1449,9 @@ export class PersonalKnowledgeModelService {
             upgradeStatus: data.upgrade_status || "current",
             upgradableDomains: Array.isArray(data.upgradable_domains)
               ? (data.upgradable_domains as Array<Record<string, unknown>>).map((domain) => {
-                  const capabilities = domain.capabilities_applied;
-                  const blockers = domain.blocked_reasons;
-                  return {
+                const capabilities = domain.capabilities_applied;
+                const blockers = domain.blocked_reasons;
+                return {
                   domain: String(domain.domain || ""),
                   currentDomainContractVersion: Number(
                     domain.current_domain_contract_version ?? 1
@@ -1478,7 +1478,7 @@ export class PersonalKnowledgeModelService {
                   upgradedAt: (domain.upgraded_at || null) as string | null,
                   needsUpgrade: Boolean(domain.needs_upgrade),
                 };
-                })
+              })
               : [],
             lastUpgradedAt: (data.last_upgraded_at || null) as string | null,
             suggestedDomains: data.suggested_domains || [],
@@ -1554,35 +1554,35 @@ export class PersonalKnowledgeModelService {
     const manifestSummaryProjection = params.manifest?.summary_projection || {};
     const normalizedManifest: DomainManifest | undefined = params.manifest
       ? {
-          ...params.manifest,
+        ...params.manifest,
+        domain_contract_version:
+          Number(params.manifest.domain_contract_version) ||
+          currentDomainContractVersion(params.domain),
+        readable_summary_version:
+          Number(params.manifest.readable_summary_version) ||
+          CURRENT_READABLE_SUMMARY_VERSION,
+        upgraded_at:
+          typeof params.manifest.upgraded_at === "string" &&
+            params.manifest.upgraded_at.trim().length > 0
+            ? params.manifest.upgraded_at
+            : metadataTimestamp,
+        summary_projection: {
+          ...manifestSummaryProjection,
           domain_contract_version:
+            Number(manifestSummaryProjection.domain_contract_version) ||
             Number(params.manifest.domain_contract_version) ||
             currentDomainContractVersion(params.domain),
           readable_summary_version:
+            Number(manifestSummaryProjection.readable_summary_version) ||
             Number(params.manifest.readable_summary_version) ||
             CURRENT_READABLE_SUMMARY_VERSION,
           upgraded_at:
-            typeof params.manifest.upgraded_at === "string" &&
-            params.manifest.upgraded_at.trim().length > 0
-              ? params.manifest.upgraded_at
-              : metadataTimestamp,
-          summary_projection: {
-            ...manifestSummaryProjection,
-            domain_contract_version:
-              Number(manifestSummaryProjection.domain_contract_version) ||
-              Number(params.manifest.domain_contract_version) ||
-              currentDomainContractVersion(params.domain),
-            readable_summary_version:
-              Number(manifestSummaryProjection.readable_summary_version) ||
-              Number(params.manifest.readable_summary_version) ||
-              CURRENT_READABLE_SUMMARY_VERSION,
-            upgraded_at:
-              typeof manifestSummaryProjection.upgraded_at === "string" &&
+            typeof manifestSummaryProjection.upgraded_at === "string" &&
               manifestSummaryProjection.upgraded_at.trim().length > 0
-                ? manifestSummaryProjection.upgraded_at
-                : metadataTimestamp,
-          },
-        }
+              ? manifestSummaryProjection.upgraded_at
+              : metadataTimestamp,
+        },
+      }
       : undefined;
 
     if (Capacitor.isNativePlatform()) {
@@ -1707,8 +1707,8 @@ export class PersonalKnowledgeModelService {
         }
         const detail =
           conflictPayload &&
-          typeof conflictPayload === "object" &&
-          "detail" in conflictPayload
+            typeof conflictPayload === "object" &&
+            "detail" in conflictPayload
             ? (conflictPayload as { detail?: unknown }).detail
             : conflictPayload;
         const detailRecord =
@@ -1775,7 +1775,7 @@ export class PersonalKnowledgeModelService {
         userId,
         vaultOwnerToken: this.getVaultOwnerToken(vaultOwnerToken),
       });
-       
+
       const raw = nativeResult as any;
       return {
         userId: raw.user_id || raw.userId || userId,
@@ -1951,7 +1951,7 @@ export class PersonalKnowledgeModelService {
           vaultOwnerToken: this.getVaultOwnerToken(vaultOwnerToken),
         });
         if (nativeResult?.ciphertext && nativeResult?.iv && nativeResult?.tag) {
-           
+
           const raw = nativeResult as any;
           result = {
             ciphertext: raw.ciphertext,
@@ -2100,8 +2100,8 @@ export class PersonalKnowledgeModelService {
         typeof payload.revoked_grant_count === "number" ? payload.revoked_grant_count : 0,
       revokedGrantIds: Array.isArray(payload.revoked_grant_ids)
         ? payload.revoked_grant_ids.filter(
-            (value): value is string => typeof value === "string"
-          )
+          (value): value is string => typeof value === "string"
+        )
         : [],
       manifest,
     };
@@ -2802,35 +2802,35 @@ export class PersonalKnowledgeModelService {
     const manifestSummaryProjection = params.manifest?.summary_projection || {};
     const normalizedManifest: DomainManifest | undefined = params.manifest
       ? {
-          ...params.manifest,
+        ...params.manifest,
+        domain_contract_version:
+          Number(params.manifest.domain_contract_version) ||
+          currentDomainContractVersion(params.domain),
+        readable_summary_version:
+          Number(params.manifest.readable_summary_version) ||
+          CURRENT_READABLE_SUMMARY_VERSION,
+        upgraded_at:
+          typeof params.manifest.upgraded_at === "string" &&
+            params.manifest.upgraded_at.trim().length > 0
+            ? params.manifest.upgraded_at
+            : metadataTimestamp,
+        summary_projection: {
+          ...manifestSummaryProjection,
           domain_contract_version:
+            Number(manifestSummaryProjection.domain_contract_version) ||
             Number(params.manifest.domain_contract_version) ||
             currentDomainContractVersion(params.domain),
           readable_summary_version:
+            Number(manifestSummaryProjection.readable_summary_version) ||
             Number(params.manifest.readable_summary_version) ||
             CURRENT_READABLE_SUMMARY_VERSION,
           upgraded_at:
-            typeof params.manifest.upgraded_at === "string" &&
-            params.manifest.upgraded_at.trim().length > 0
-              ? params.manifest.upgraded_at
-              : metadataTimestamp,
-          summary_projection: {
-            ...manifestSummaryProjection,
-            domain_contract_version:
-              Number(manifestSummaryProjection.domain_contract_version) ||
-              Number(params.manifest.domain_contract_version) ||
-              currentDomainContractVersion(params.domain),
-            readable_summary_version:
-              Number(manifestSummaryProjection.readable_summary_version) ||
-              Number(params.manifest.readable_summary_version) ||
-              CURRENT_READABLE_SUMMARY_VERSION,
-            upgraded_at:
-              typeof manifestSummaryProjection.upgraded_at === "string" &&
+            typeof manifestSummaryProjection.upgraded_at === "string" &&
               manifestSummaryProjection.upgraded_at.trim().length > 0
-                ? manifestSummaryProjection.upgraded_at
-                : metadataTimestamp,
-          },
-        }
+              ? manifestSummaryProjection.upgraded_at
+              : metadataTimestamp,
+        },
+      }
       : undefined;
     const payload: Record<string, unknown> = {
       user_id: params.userId,
@@ -2960,18 +2960,18 @@ export class PersonalKnowledgeModelService {
           const nativeSegments =
             result.encrypted_blob.segments && typeof result.encrypted_blob.segments === "object"
               ? Object.fromEntries(
-                  Object.entries(result.encrypted_blob.segments).map(([segmentId, segmentBlob]) => [
-                    segmentId,
-                    {
-                      ciphertext: (segmentBlob as Record<string, unknown>).ciphertext as string,
-                      iv: (segmentBlob as Record<string, unknown>).iv as string,
-                      tag: (segmentBlob as Record<string, unknown>).tag as string,
-                      algorithm:
-                        ((segmentBlob as Record<string, unknown>).algorithm as string) ||
-                        "aes-256-gcm",
-                    },
-                  ])
-                )
+                Object.entries(result.encrypted_blob.segments).map(([segmentId, segmentBlob]) => [
+                  segmentId,
+                  {
+                    ciphertext: (segmentBlob as Record<string, unknown>).ciphertext as string,
+                    iv: (segmentBlob as Record<string, unknown>).iv as string,
+                    tag: (segmentBlob as Record<string, unknown>).tag as string,
+                    algorithm:
+                      ((segmentBlob as Record<string, unknown>).algorithm as string) ||
+                      "aes-256-gcm",
+                  },
+                ])
+              )
               : undefined;
           encryptedBlob = {
             ciphertext: result.encrypted_blob.ciphertext,
@@ -2995,12 +2995,11 @@ export class PersonalKnowledgeModelService {
       } else {
         // Web: Use ApiService.apiFetch() for tri-flow compliance
         const response = await ApiService.apiFetch(
-          `${this.PKM_API_PREFIX}/domain-data/${userId}/${domain}${
-            normalizedSegmentIds.length > 0
-              ? `?${normalizedSegmentIds
-                  .map((segmentId) => `segment_ids=${encodeURIComponent(segmentId)}`)
-                  .join("&")}`
-              : ""
+          `${this.PKM_API_PREFIX}/domain-data/${userId}/${domain}${normalizedSegmentIds.length > 0
+            ? `?${normalizedSegmentIds
+              .map((segmentId) => `segment_ids=${encodeURIComponent(segmentId)}`)
+              .join("&")}`
+            : ""
           }`,
           {
             headers: this.getAuthHeaders(vaultOwnerToken),
@@ -3019,20 +3018,20 @@ export class PersonalKnowledgeModelService {
           const segments =
             data.encrypted_blob.segments && typeof data.encrypted_blob.segments === "object"
               ? Object.fromEntries(
-                  Object.entries(data.encrypted_blob.segments as Record<string, unknown>).map(
-                    ([segmentId, segmentBlob]) => [
-                      segmentId,
-                      {
-                        ciphertext: (segmentBlob as Record<string, unknown>).ciphertext as string,
-                        iv: (segmentBlob as Record<string, unknown>).iv as string,
-                        tag: (segmentBlob as Record<string, unknown>).tag as string,
-                        algorithm:
-                          ((segmentBlob as Record<string, unknown>).algorithm as string) ||
-                          "aes-256-gcm",
-                      },
-                    ]
-                  )
+                Object.entries(data.encrypted_blob.segments as Record<string, unknown>).map(
+                  ([segmentId, segmentBlob]) => [
+                    segmentId,
+                    {
+                      ciphertext: (segmentBlob as Record<string, unknown>).ciphertext as string,
+                      iv: (segmentBlob as Record<string, unknown>).iv as string,
+                      tag: (segmentBlob as Record<string, unknown>).tag as string,
+                      algorithm:
+                        ((segmentBlob as Record<string, unknown>).algorithm as string) ||
+                        "aes-256-gcm",
+                    },
+                  ]
                 )
+              )
               : undefined;
           encryptedBlob = {
             ciphertext: data.encrypted_blob.ciphertext,
