@@ -32,7 +32,7 @@ AGENT_WEIGHTS = {
         "fundamental": 0.40,  # Strong emphasis on fundamentals
         "sentiment": 0.10,  # Low weight on sentiment
         "valuation": 0.25,  # Moderate valuation focus
-        "macro": 0.25,      # High macro sensitivity
+        "macro": 0.25,  # High macro sensitivity
     },
     "balanced": {
         "fundamental": 0.30,
@@ -44,7 +44,7 @@ AGENT_WEIGHTS = {
         "fundamental": 0.20,  # Lower fundamental weight
         "sentiment": 0.40,  # High sentiment weight (momentum)
         "valuation": 0.25,
-        "macro": 0.15,      # Lower macro focus, high momentum
+        "macro": 0.15,  # Lower macro focus, high momentum
     },
 }
 

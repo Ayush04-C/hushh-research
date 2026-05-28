@@ -41,9 +41,9 @@ from .config import (
     RiskProfile,
 )
 from .fundamental_agent import FundamentalInsight
+from .macro_agent import MacroInsight
 from .sentiment_agent import SentimentInsight
 from .valuation_agent import ValuationInsight
-from .macro_agent import MacroInsight
 
 logger = logging.getLogger(__name__)
 
@@ -1077,7 +1077,9 @@ class DebateEngine:
         }
 
         # Calculate weighted decision
-        decision, confidence = self._calculate_weighted_decision(fundamental, sentiment, valuation, macro)
+        decision, confidence = self._calculate_weighted_decision(
+            fundamental, sentiment, valuation, macro
+        )
 
         # Check for consensus
         unique_votes = set(agent_votes.values())

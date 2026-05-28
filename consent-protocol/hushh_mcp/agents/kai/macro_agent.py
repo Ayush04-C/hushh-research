@@ -11,13 +11,18 @@ from typing import Any, Dict, List, Optional
 
 from hushh_mcp.agents.base_agent import HushhAgent
 from hushh_mcp.constants import GEMINI_MODEL
-from hushh_mcp.operons.kai.llm import stream_gemini_response, is_gemini_ready, get_gemini_unavailable_reason
+from hushh_mcp.operons.kai.llm import (
+    is_gemini_ready,
+    stream_gemini_response,
+)
 
 logger = logging.getLogger(__name__)
+
 
 @dataclass
 class MacroInsight:
     """Macro-economic analysis insight with sources and confidence."""
+
     summary: str
     interest_rate_impact: str
     inflation_impact: str
@@ -27,6 +32,7 @@ class MacroInsight:
     confidence: float
     recommendation: str  # "buy", "hold", "reduce"
     sources: List[str]
+
 
 class MacroAgent(HushhAgent):
     """
@@ -61,7 +67,9 @@ class MacroAgent(HushhAgent):
         logger.info(f"[Macro] Orchestrating macro analysis for {ticker}")
 
         if not is_gemini_ready() or self.processing_mode != "hybrid":
-            return self._build_deterministic_fallback(ticker, "Gemini LLM unavailable or offline mode.")
+            return self._build_deterministic_fallback(
+                ticker, "Gemini LLM unavailable or offline mode."
+            )
 
         try:
             # We will use Gemini to generate a macro outlook based on general market context.
@@ -82,24 +90,23 @@ class MacroAgent(HushhAgent):
                 "confidence": 0.85
             }}
             """
-            
+
             full_response = ""
             async for event in stream_gemini_response(prompt=prompt, agent_name="macro"):
                 if event.get("type") == "token":
                     full_response += event.get("text", "")
-            
+
             # Clean JSON and parse
             import json
-            import re
-            
+
             json_str = full_response.strip()
             if "```json" in json_str:
                 json_str = json_str.split("```json")[1].split("```")[0].strip()
             elif "```" in json_str:
                 json_str = json_str.split("```")[1].split("```")[0].strip()
-                
+
             analysis = json.loads(json_str)
-            
+
             return MacroInsight(
                 summary=analysis.get("summary", "Macro analysis completed."),
                 interest_rate_impact=analysis.get("interest_rate_impact", "Neutral"),
@@ -109,9 +116,9 @@ class MacroAgent(HushhAgent):
                 macro_bear_case=analysis.get("macro_bear_case", "Economic headwinds."),
                 confidence=float(analysis.get("confidence", 0.70)),
                 recommendation=analysis.get("recommendation", "hold").lower(),
-                sources=["Gemini Macro-Economic Model"]
+                sources=["Gemini Macro-Economic Model"],
             )
-            
+
         except Exception as e:
             logger.error(f"[Macro] Error during analysis: {e}")
             return self._build_deterministic_fallback(ticker, str(e))
@@ -126,7 +133,8 @@ class MacroAgent(HushhAgent):
             macro_bear_case="Systemic shock risks.",
             confidence=0.40,
             recommendation="hold",
-            sources=["Deterministic Fallback"]
+            sources=["Deterministic Fallback"],
         )
+
 
 macro_agent = MacroAgent()

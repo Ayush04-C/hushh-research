@@ -225,7 +225,6 @@ def _pre_agent_streaming_enabled() -> bool:
     return raw in {"1", "true", "yes", "on"}
 
 
-
 def _build_fallback_macro_insight(ticker: str, error: Exception) -> MacroInsight:
     message = str(error) or "provider unavailable"
     return MacroInsight(
@@ -239,6 +238,7 @@ def _build_fallback_macro_insight(ticker: str, error: Exception) -> MacroInsight
         recommendation="hold",
         sources=["deterministic_fallback"],
     )
+
 
 def _build_fallback_fundamental_insight(ticker: str, error: Exception) -> FundamentalInsight:
     message = str(error) or "provider unavailable"
@@ -1484,7 +1484,7 @@ async def analyze_stream_generator(
                 "phase": "analysis",
             },
         )
-        
+
         concurrent_results = await asyncio.gather(
             asyncio.wait_for(
                 fundamental_agent.analyze(
@@ -1524,7 +1524,9 @@ async def analyze_stream_generator(
             ),
             return_exceptions=True,
         )
-        fundamental_first_res, sentiment_first_res, valuation_first_res, macro_first_res = concurrent_results
+        fundamental_first_res, sentiment_first_res, valuation_first_res, macro_first_res = (
+            concurrent_results
+        )
 
         if pre_agent_thinking_enabled:
             llm_calls_count += 1
@@ -1938,7 +1940,6 @@ async def analyze_stream_generator(
                 },
             )
 
-
         # Run actual macro analysis
         try:
             max_agent_attempts = 3
@@ -2028,7 +2029,7 @@ async def analyze_stream_generator(
                     "phase": "analysis",
                 },
             )
-            
+
         # Check if client disconnected
         if await request.is_disconnected():
             return
