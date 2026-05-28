@@ -100,8 +100,9 @@ const INITIAL_ROUND_STATE: Record<string, AgentState> = {
   fundamental: { ...INITIAL_AGENT_STATE },
   sentiment: { ...INITIAL_AGENT_STATE },
   valuation: { ...INITIAL_AGENT_STATE },
+  macro: { ...INITIAL_AGENT_STATE },
 };
-const AGENTS = ["fundamental", "sentiment", "valuation"] as const;
+const AGENTS = ["fundamental", "sentiment", "valuation", "macro"] as const;
 
 // ============================================================================
 // Error Classification
@@ -762,6 +763,7 @@ export function DebateStreamView({
       fundamental: "Fundamental",
       sentiment: "Sentiment",
       valuation: "Valuation",
+      macro: "Macro",
     };
     // Find the currently active agent
     const states = activeRound === 1 ? round1States : round2States;

@@ -40,6 +40,7 @@ export interface AnalysisResult {
   fundamentalInsights?: string;
   sentimentInsights?: string;
   valuationInsights?: string;
+  macroInsights?: string;
 }
 
 interface AnalysisViewProps {
@@ -102,7 +103,7 @@ export function AnalysisView({
   onBack,
   onAnalyzeAnother,
 }: AnalysisViewProps) {
-  const [activeTab, setActiveTab] = useState<"fundamental" | "sentiment" | "valuation">("fundamental");
+  const [activeTab, setActiveTab] = useState<"fundamental" | "sentiment" | "valuation" | "macro">("fundamental");
   const [searchInput, setSearchInput] = useState("");
 
   const handleSearch = (e: React.FormEvent) => {
@@ -205,6 +206,7 @@ export function AnalysisView({
               { key: "fundamental", label: "Fundamental" },
               { key: "sentiment", label: "Sentiment" },
               { key: "valuation", label: "Valuation" },
+              { key: "macro", label: "Macro" },
             ].map((tab) => (
               <MorphyButton
                 key={tab.key}
@@ -234,6 +236,11 @@ export function AnalysisView({
             {activeTab === "valuation" && (
               <p className="text-sm">
                 {result.valuationInsights || "Valuation analysis compares the stock's current price to its intrinsic value using metrics like P/E ratio, DCF models, and peer comparisons."}
+              </p>
+            )}
+            {activeTab === "macro" && (
+              <p className="text-sm">
+                {result.macroInsights || "Macro-economic analysis evaluates global trends, interest rates, inflation, and sector-wide forces impacting the asset's performance."}
               </p>
             )}
           </div>

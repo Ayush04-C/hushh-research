@@ -82,7 +82,16 @@ export interface DecisionResult {
       financial_resilience?: string;
       growth_efficiency?: string;
       bull_case?: string;
+      bull_case?: string;
       bear_case?: string;
+    };
+    macro_insight?: {
+      summary?: string;
+      interest_rate_impact?: string;
+      inflation_impact?: string;
+      sector_trend?: string;
+      macro_bull_case?: string;
+      macro_bear_case?: string;
     };
     quant_metrics?: Record<string, unknown>;
     key_metrics?: {
@@ -1073,6 +1082,30 @@ export function DecisionCard({ result }: { result: DecisionResult }) {
               <div className={DETAIL_PANEL_COMPACT_CLASSNAME}>
                 <p className="mb-1 text-[9px] font-semibold uppercase tracking-widest text-foreground/68 dark:text-foreground/72">Growth Eff.</p>
                 <p className="text-xs font-medium">{rawCard.fundamental_insight.growth_efficiency}</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* MACRO IMPACTS */}
+        {(rawCard?.macro_insight?.interest_rate_impact || rawCard?.macro_insight?.inflation_impact || rawCard?.macro_insight?.sector_trend) && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {rawCard.macro_insight.sector_trend && (
+              <div className={DETAIL_PANEL_COMPACT_CLASSNAME}>
+                <p className="mb-1 text-[9px] font-semibold uppercase tracking-widest text-foreground/68 dark:text-foreground/72">Sector Trend</p>
+                <p className="text-xs font-medium">{rawCard.macro_insight.sector_trend}</p>
+              </div>
+            )}
+            {rawCard.macro_insight.interest_rate_impact && (
+              <div className={DETAIL_PANEL_COMPACT_CLASSNAME}>
+                <p className="mb-1 text-[9px] font-semibold uppercase tracking-widest text-foreground/68 dark:text-foreground/72">Rates Impact</p>
+                <p className="text-xs font-medium">{rawCard.macro_insight.interest_rate_impact}</p>
+              </div>
+            )}
+            {rawCard.macro_insight.inflation_impact && (
+              <div className={DETAIL_PANEL_COMPACT_CLASSNAME}>
+                <p className="mb-1 text-[9px] font-semibold uppercase tracking-widest text-foreground/68 dark:text-foreground/72">Inflation</p>
+                <p className="text-xs font-medium">{rawCard.macro_insight.inflation_impact}</p>
               </div>
             )}
           </div>

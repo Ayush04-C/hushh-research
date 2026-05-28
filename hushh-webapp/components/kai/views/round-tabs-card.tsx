@@ -42,7 +42,7 @@ interface RoundTabsCardProps {
 }
 
 // Agent ordering - always sequential
-const AGENT_ORDER = ["fundamental", "sentiment", "valuation"] as const;
+const AGENT_ORDER = ["fundamental", "sentiment", "valuation", "macro"] as const;
 
 const AGENT_CONFIG = {
   fundamental: {
@@ -65,6 +65,13 @@ const AGENT_CONFIG = {
     color: "text-emerald-500",
     bgActive: "bg-emerald-500",
     bgDot: "bg-emerald-500",
+  },
+  macro: {
+    label: "Macro",
+    icon: <Icon icon={Search} size="sm" />,
+    color: "text-amber-500",
+    bgActive: "bg-amber-500",
+    bgDot: "bg-amber-500",
   },
 } as const;
 
@@ -150,7 +157,7 @@ export function RoundTabsCard({
               </Badge>
             ) : hasAnyActivity ? (
               <Badge variant="outline" className="text-xs bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30">
-                <Icon icon={Clock} size={12} className="mr-1 animate-pulse" /> {completedCount}/3
+                <Icon icon={Clock} size={12} className="mr-1 animate-pulse" /> {completedCount}/4
               </Badge>
             ) : null}
             <MorphyButton
@@ -169,7 +176,7 @@ export function RoundTabsCard({
       {!isCollapsed && (
         <MorphyCardContent>
           <Tabs value={activeAgent || currentTab} onValueChange={handleTabChange} className="w-full">
-            <TabsList className="mb-4 grid h-10 w-full grid-cols-3 gap-1">
+            <TabsList className="mb-4 grid h-10 w-full grid-cols-4 gap-1">
               {AGENT_ORDER.map((agent) => {
                 const config = AGENT_CONFIG[agent];
                 const state = agentStates[agent];

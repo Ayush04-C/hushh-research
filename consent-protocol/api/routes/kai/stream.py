@@ -28,6 +28,7 @@ from api.routes.kai._streaming import (
 from api.routes.kai.run_manager import KaiAnalyzeRunManager
 from hushh_mcp.agents.kai.debate_engine import DebateEngine
 from hushh_mcp.agents.kai.fundamental_agent import FundamentalAgent, FundamentalInsight
+from hushh_mcp.agents.kai.macro_agent import MacroAgent, MacroInsight
 from hushh_mcp.agents.kai.sentiment_agent import SentimentAgent, SentimentInsight
 from hushh_mcp.agents.kai.valuation_agent import ValuationAgent, ValuationInsight
 from hushh_mcp.consent.token import validate_token_with_db
@@ -223,6 +224,21 @@ def _pre_agent_streaming_enabled() -> bool:
     raw = str(os.getenv("KAI_STREAM_PRE_AGENT_THINKING", "false")).strip().lower()
     return raw in {"1", "true", "yes", "on"}
 
+
+
+def _build_fallback_macro_insight(ticker: str, error: Exception) -> MacroInsight:
+    message = str(error) or "provider unavailable"
+    return MacroInsight(
+        summary=f"Macro inputs are limited for {ticker} ({message}).",
+        interest_rate_impact="Unknown",
+        inflation_impact="Unknown",
+        sector_trend="Unknown",
+        macro_bull_case="Unknown",
+        macro_bear_case="Unknown",
+        confidence=0.25,
+        recommendation="hold",
+        sources=["deterministic_fallback"],
+    )
 
 def _build_fallback_fundamental_insight(ticker: str, error: Exception) -> FundamentalInsight:
     message = str(error) or "provider unavailable"
@@ -1357,6 +1373,7 @@ async def analyze_stream_generator(
         fundamental_agent = FundamentalAgent(processing_mode="hybrid")
         sentiment_agent = SentimentAgent(processing_mode="hybrid")
         valuation_agent = ValuationAgent(processing_mode="hybrid")
+        macro_agent = MacroAgent(processing_mode="hybrid")
         degraded_agents: list[str] = []
 
         # =====================================================================
@@ -1424,6 +1441,17 @@ async def analyze_stream_generator(
         yield create_event(
             "agent_start",
             {
+                "agent": "macro",
+                "agent_name": "Macro Agent",
+                "color": "#f59e0b",
+                "message": f"Analyzing macroeconomic factors for {ticker}...",
+                "round": 1,
+                "phase": "analysis",
+            },
+        )
+        yield create_event(
+            "agent_start",
+            {
                 "agent": "sentiment",
                 "agent_name": "Sentiment Agent",
                 "color": "#8b5cf6",
@@ -1445,6 +1473,18 @@ async def analyze_stream_generator(
         )
 
         # Parallelize the sequential agent calls to reduce 'Time-To-First-Token' for the debate engine.
+        yield create_event(
+            "agent_start",
+            {
+                "agent": "macro",
+                "agent_name": "Macro Agent",
+                "color": "#f59e0b",
+                "message": f"Analyzing macroeconomic factors for {ticker}...",
+                "round": 1,
+                "phase": "analysis",
+            },
+        )
+        
         concurrent_results = await asyncio.gather(
             asyncio.wait_for(
                 fundamental_agent.analyze(
@@ -1473,9 +1513,18 @@ async def analyze_stream_generator(
                 ),
                 timeout=remaining_timeout(),
             ),
+            asyncio.wait_for(
+                macro_agent.analyze(
+                    ticker=ticker,
+                    user_id=user_id,
+                    consent_token=consent_token,
+                    context=context,
+                ),
+                timeout=remaining_timeout(),
+            ),
             return_exceptions=True,
         )
-        fundamental_first_res, sentiment_first_res, valuation_first_res = concurrent_results
+        fundamental_first_res, sentiment_first_res, valuation_first_res, macro_first_res = concurrent_results
 
         if pre_agent_thinking_enabled:
             llm_calls_count += 1
@@ -1889,6 +1938,98 @@ async def analyze_stream_generator(
                 },
             )
 
+
+        # Run actual macro analysis
+        try:
+            max_agent_attempts = 3
+            macro_insight = None
+            macro_last_error: Optional[Exception] = None
+            for attempt in range(1, max_agent_attempts + 1):
+                try:
+                    provider_calls_count += 1
+                    if attempt == 1:
+                        if isinstance(macro_first_res, Exception):
+                            raise macro_first_res
+                        macro_insight = macro_first_res
+                    else:
+                        macro_insight = await asyncio.wait_for(
+                            macro_agent.analyze(
+                                ticker=ticker,
+                                user_id=user_id,
+                                consent_token=consent_token,
+                                context=context,
+                            ),
+                            timeout=remaining_timeout(),
+                        )
+                    macro_last_error = None
+                    break
+                except Exception as agent_err:
+                    macro_last_error = agent_err
+                    if _is_retryable_rate_limit_error(agent_err) and attempt < max_agent_attempts:
+                        retry_counts["macro"] = retry_counts.get("macro", 0) + 1
+                        retry_delay = min(8, 2**attempt)
+                        yield create_event(
+                            "warning",
+                            {
+                                "phase": "analysis",
+                                "round": 1,
+                                "agent": "macro",
+                                "code": "AGENT_RATE_LIMIT_RETRY",
+                                "retryable": True,
+                                "retry_in_seconds": retry_delay,
+                                "message": f"Macro agent throttled. Retrying in {retry_delay}s.",
+                            },
+                        )
+                        await asyncio.sleep(retry_delay)
+                        continue
+                    break
+            if macro_last_error is not None or macro_insight is None:
+                raise macro_last_error or RuntimeError("Macro agent returned no output")
+            yield create_event(
+                "agent_complete",
+                {
+                    "agent": "macro",
+                    "summary": macro_insight.summary,
+                    "recommendation": macro_insight.recommendation,
+                    "confidence": macro_insight.confidence,
+                    "interest_rate_impact": macro_insight.interest_rate_impact,
+                    "inflation_impact": macro_insight.inflation_impact,
+                    "sector_trend": macro_insight.sector_trend,
+                    "macro_bull_case": macro_insight.macro_bull_case,
+                    "macro_bear_case": macro_insight.macro_bear_case,
+                    "sources": macro_insight.sources,
+                    "round": 1,
+                    "phase": "analysis",
+                },
+            )
+        except Exception as e:
+            logger.error(f"[Kai Stream] Macro agent error: {e}")
+            yield create_event(
+                "agent_error",
+                {"agent": "macro", "error": str(e), "round": 1, "phase": "analysis"},
+            )
+            degraded_agents.append("macro")
+            macro_insight = _build_fallback_macro_insight(ticker, e)
+            yield create_event(
+                "agent_complete",
+                {
+                    "agent": "macro",
+                    "summary": macro_insight.summary,
+                    "recommendation": macro_insight.recommendation,
+                    "confidence": macro_insight.confidence,
+                    "interest_rate_impact": macro_insight.interest_rate_impact,
+                    "inflation_impact": macro_insight.inflation_impact,
+                    "sector_trend": macro_insight.sector_trend,
+                    "macro_bull_case": macro_insight.macro_bull_case,
+                    "macro_bear_case": macro_insight.macro_bear_case,
+                    "sources": macro_insight.sources,
+                    "fallback_used": True,
+                    "round": 1,
+                    "phase": "analysis",
+                },
+            )
+            
+        # Check if client disconnected
         if await request.is_disconnected():
             return
 
@@ -1933,6 +2074,7 @@ async def analyze_stream_generator(
             fundamental_insight=fundamental_insight,
             sentiment_insight=sentiment_insight,
             valuation_insight=valuation_insight,
+            macro_insight=macro_insight,
             user_context=full_user_context,  # Redundant but keeps signature clean
         ):
             # If client disconnected, stop yielding
@@ -2009,7 +2151,7 @@ async def analyze_stream_generator(
 
         debate_result = await asyncio.wait_for(
             debate_engine._build_consensus(
-                fundamental_insight, sentiment_insight, valuation_insight
+                fundamental_insight, sentiment_insight, valuation_insight, macro_insight
             ),
             timeout=remaining_timeout(),
         )
