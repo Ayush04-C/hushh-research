@@ -75,7 +75,9 @@ class MacroAgent(HushhAgent):
         try:
             # We will use Gemini to generate a macro outlook based on general market context.
             # In a full implementation, we would fetch live Fed rates, CPI data, etc.
-            prompt = f"{self.system_prompt}\n\n" + f"""
+            prompt = (
+                f"{self.system_prompt}\n\n"
+                + f"""
             Analyze the macro-economic outlook for {ticker}.
             Consider current high-level market trends, interest rate environments, and inflation.
             
@@ -91,6 +93,7 @@ class MacroAgent(HushhAgent):
                 "confidence": 0.85
             }}
             """
+            )
 
             import asyncio
             import json
@@ -106,9 +109,7 @@ class MacroAgent(HushhAgent):
                     )
                     break
                 except Exception as e:
-                    logger.warning(
-                        f"[Macro] Gemini analysis failed (attempt {attempt + 1}/2): {e}"
-                    )
+                    logger.warning(f"[Macro] Gemini analysis failed (attempt {attempt + 1}/2): {e}")
                     if attempt == 1:
                         raise
                     await asyncio.sleep(2.0)
