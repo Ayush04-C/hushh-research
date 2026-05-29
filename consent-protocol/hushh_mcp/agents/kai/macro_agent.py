@@ -10,10 +10,10 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
 from hushh_mcp.agents.base_agent import HushhAgent
-from hushh_mcp.constants import GEMINI_MODEL
+from hushh_mcp.constants import GEMINI_MODEL, KAI_LLM_MAX_OUTPUT_TOKENS_DEFAULT
 from hushh_mcp.operons.kai.llm import (
+    _generate_content_text,
     is_gemini_ready,
-    stream_gemini_response,
 )
 
 logger = logging.getLogger(__name__)
@@ -43,14 +43,15 @@ class MacroAgent(HushhAgent):
         self.agent_id = "macro"
         self.processing_mode = processing_mode
         self.color = "#f59e0b"  # Amber
+        self.system_prompt = """
+            You are a Macro-Economic Analyst focused on interest rates, inflation, and sector trends.
+            Your job is to analyze how broader economic conditions will impact a specific company's performance.
+            """
 
         super().__init__(
             name="Macro-Economic Agent",
             model=GEMINI_MODEL,
-            system_prompt="""
-            You are a Macro-Economic Analyst focused on interest rates, inflation, and sector trends.
-            Your job is to analyze how broader economic conditions will impact a specific company's performance.
-            """,
+            system_prompt=self.system_prompt,
             required_scopes=["agent.kai.macro"],
         )
 
@@ -74,7 +75,7 @@ class MacroAgent(HushhAgent):
         try:
             # We will use Gemini to generate a macro outlook based on general market context.
             # In a full implementation, we would fetch live Fed rates, CPI data, etc.
-            prompt = f"""
+            prompt = f"{self.system_prompt}\n\n" + f"""
             Analyze the macro-economic outlook for {ticker}.
             Consider current high-level market trends, interest rate environments, and inflation.
             
@@ -91,15 +92,30 @@ class MacroAgent(HushhAgent):
             }}
             """
 
-            full_response = ""
-            async for event in stream_gemini_response(prompt=prompt, agent_name="macro"):
-                if event.get("type") == "token":
-                    full_response += event.get("text", "")
-
-            # Clean JSON and parse
+            import asyncio
             import json
 
-            json_str = full_response.strip()
+            json_str = ""
+            for attempt in range(2):
+                try:
+                    json_str = await _generate_content_text(
+                        prompt=prompt,
+                        timeout_seconds=45.0,
+                        max_output_tokens=KAI_LLM_MAX_OUTPUT_TOKENS_DEFAULT,
+                        response_mime_type="application/json",
+                    )
+                    break
+                except Exception as e:
+                    logger.warning(
+                        f"[Macro] Gemini analysis failed (attempt {attempt + 1}/2): {e}"
+                    )
+                    if attempt == 1:
+                        raise
+                    await asyncio.sleep(2.0)
+
+            if not json_str:
+                raise ValueError("Empty response received from LLM")
+
             if "```json" in json_str:
                 json_str = json_str.split("```json")[1].split("```")[0].strip()
             elif "```" in json_str:
