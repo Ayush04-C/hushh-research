@@ -796,13 +796,14 @@ async def analyze_macro_with_gemini(
     user_id: UserID,
     consent_token: str,
     market_data: Optional[Dict[str, Any]] = None,
+    macro_indicators: Optional[Dict[str, Any]] = None,
     user_context: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """
     Operon: Deep macro analysis using Gemini.
 
     Validates: agent.kai.analyze
-    Context: Market snapshot
+    Context: Market snapshot + live macro indicators (VIX, 10-Year Treasury yield)
     """
     valid, reason, token = validate_token(consent_token, ConsentScope("agent.kai.analyze"))
     if not valid:
@@ -817,6 +818,22 @@ async def analyze_macro_with_gemini(
     user_risk = user_context.get("risk_tolerance", "Balanced") if user_context else "Balanced"
     horizon = user_context.get("time_horizon", "Unknown") if user_context else "Unknown"
 
+    # Build the live macro indicators block only when data is available.
+    macro_indicators = macro_indicators or {}
+    vix = float(macro_indicators.get("vix") or 0)
+    treasury_yield_10y = float(macro_indicators.get("treasury_yield_10y") or 0)
+    vix_source = macro_indicators.get("vix_source") or "unavailable"
+    yield_source = macro_indicators.get("yield_source") or "unavailable"
+
+    if vix > 0 and treasury_yield_10y > 0:
+        live_macro_block = f"""
+    [Live Macro Indicators]
+    VIX (CBOE Volatility Index): {vix:.2f}  (source: {vix_source})
+    10-Year Treasury Yield: {treasury_yield_10y:.2f}%  (source: {yield_source})
+"""
+    else:
+        live_macro_block = "\n    [Live Macro Indicators]\n    Data unavailable — reason from model priors.\n"
+
     context = f"""
     --- MACRO ANALYSIS TERMINAL ({ticker}) ---
     
@@ -827,7 +844,7 @@ async def analyze_macro_with_gemini(
     Market Cap: {market_data.get("market_cap", "N/A") if market_data else "N/A"}
     Sector: {market_data.get("sector", "Unknown") if market_data else "Unknown"}
     Beta: {market_data.get("beta", "Unknown") if market_data else "Unknown"}
-    
+    {live_macro_block}
     [Investor Profile]
     Risk Tolerance: {user_risk}
     Time Horizon: {horizon}
@@ -849,6 +866,7 @@ Your mission is to evaluate broader economic conditions (interest rates, inflati
 
 ### RULES
 - Focus on actionable insights, not generic observations.
+- Anchor interest_rate_impact and inflation_impact to the exact VIX and Treasury yield values provided.
 - Tailor the response to the user's risk tolerance and time horizon.
 - Use plain investor language and avoid internal system jargon.
 - DO NOT use markdown inside JSON strings.

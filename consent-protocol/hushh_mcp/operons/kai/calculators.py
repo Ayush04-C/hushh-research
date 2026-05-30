@@ -281,30 +281,45 @@ def calculate_valuation_metrics(market_data: Dict[str, Any]) -> Dict[str, float]
 # ============================================================================
 
 
-def calculate_macro_metrics(market_data: Dict[str, Any]) -> Dict[str, float]:
+def calculate_macro_metrics(
+    market_data: Dict[str, Any],
+    macro_indicators: Dict[str, Any] | None = None,
+) -> Dict[str, float]:
     """
-    Calculate baseline macro metrics from market data context.
+    Calculate baseline macro metrics from market data and live macro indicators.
 
     Args:
         market_data: Current market snapshot
+        macro_indicators: Live macro indicators from fetch_macro_indicators()
+                          (vix, treasury_yield_10y). When None, proxy values are
+                          used so existing callers continue to work unchanged.
 
     Returns:
-        Dict of baseline macro indicators
+        Dict of baseline macro indicators including vix and treasury_yield_10y
+        when live data is available.
     """
+    macro_indicators = macro_indicators or {}
+
+    # Live macro signals — fall back to market-average defaults when unavailable.
+    vix: float = float(macro_indicators.get("vix") or 0) or 20.0
+    treasury_yield_10y: float = float(macro_indicators.get("treasury_yield_10y") or 0) or 4.5
+
     if not market_data:
         return {
-            "implied_volatility": 15.0,  # Default average
-            "market_momentum": 0.5,      # Neutral
-            "rate_sensitivity": 1.0,     # Neutral beta
+            "implied_volatility": vix,
+            "market_momentum": 0.5,       # Neutral
+            "rate_sensitivity": 1.0,      # Neutral beta
+            "vix": vix,
+            "treasury_yield_10y": treasury_yield_10y,
         }
-    
+
     # Estimate beta/rate sensitivity
-    beta = market_data.get("beta", 1.0)
-    
+    beta = float(market_data.get("beta") or 1.0)
+
     # Estimate momentum based on moving averages or price
-    price = market_data.get("price", 0)
-    ma50 = market_data.get("fifty_day_average", price)
-    
+    price = float(market_data.get("price") or 0)
+    ma50 = float(market_data.get("fifty_day_average") or price)
+
     momentum = 0.5
     if price > 0 and ma50 > 0:
         ratio = price / ma50
@@ -312,14 +327,17 @@ def calculate_macro_metrics(market_data: Dict[str, Any]) -> Dict[str, float]:
             momentum = 0.8
         elif ratio < 0.95:
             momentum = 0.2
-            
-    # Proxy volatility using beta * baseline VIX (15.0)
-    implied_vol = 15.0 * beta
-    
+
+    # Implied volatility: scale live VIX by stock beta for a stock-specific proxy.
+    # When live VIX is available this is more accurate than the old 15.0 * beta proxy.
+    implied_vol = vix * max(beta, 0.1)
+
     return {
-        "implied_volatility": max(min(implied_vol, 50.0), 10.0),
+        "implied_volatility": max(min(implied_vol, 80.0), 5.0),
         "market_momentum": momentum,
         "rate_sensitivity": beta,
+        "vix": vix,
+        "treasury_yield_10y": treasury_yield_10y,
     }
 
 

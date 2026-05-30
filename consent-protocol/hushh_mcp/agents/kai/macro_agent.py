@@ -67,7 +67,7 @@ class MacroAgent(HushhAgent):
         logger.info(f"[Macro] Orchestrating analysis for {ticker} - user {user_id}")
 
         # Operon 1: Fetch market data for baseline context
-        from hushh_mcp.operons.kai.fetchers import fetch_market_data
+        from hushh_mcp.operons.kai.fetchers import fetch_macro_indicators, fetch_market_data
 
         market_data: Optional[Dict[str, Any]] = None
         try:
@@ -75,6 +75,24 @@ class MacroAgent(HushhAgent):
         except Exception as e:
             logger.warning(f"[Macro] Market snapshot unavailable for {ticker}: {e}")
             market_data = {}
+
+        # Operon 1b: Fetch live macro indicators (VIX, 10-Year Treasury yield).
+        # Graceful degradation: a failed fetch falls back to defaults inside the operon;
+        # the analysis pipeline must never hard-block on supplemental macro data.
+        macro_indicators: Dict[str, Any] = {}
+        try:
+            macro_indicators = await fetch_macro_indicators(user_id, consent_token)
+            logger.info(
+                "[Macro] Live indicators fetched — VIX=%.2f, 10Y=%.2f%%",
+                macro_indicators.get("vix", 0),
+                macro_indicators.get("treasury_yield_10y", 0),
+            )
+        except Exception as e:
+            logger.warning(
+                "[Macro] Live macro indicators unavailable for %s, using defaults: %s",
+                ticker,
+                e,
+            )
 
         # Operon 2: Gemini Deep Macro Analysis
         from hushh_mcp.operons.kai.llm import (
@@ -97,6 +115,7 @@ class MacroAgent(HushhAgent):
                         user_id=user_id,
                         consent_token=consent_token,
                         market_data=market_data,
+                        macro_indicators=macro_indicators,
                         user_context=context,
                     )
                     break
@@ -140,6 +159,7 @@ class MacroAgent(HushhAgent):
                 user_id=user_id,
                 market_data=market_data,
                 consent_token=consent_token,
+                macro_indicators=macro_indicators,
             )
 
             return MacroInsight(
