@@ -1,7 +1,7 @@
 """
 Agent Kai — Debate Engine
 
-Orchestrates round-robin debate between 3 specialist agents to reach consensus.
+Orchestrates round-robin debate between 4 specialist agents to reach consensus.
 
 Key Responsibilities:
 - Multi-agent debate orchestration
@@ -116,7 +116,7 @@ class DebateResult:
 
 class DebateEngine:
     """
-    Debate Engine - Orchestrates 3-agent discussion with Real-Time Streaming.
+    Debate Engine - Orchestrates 4-agent discussion with Real-Time Streaming.
 
     Implements the AlphaAgents framework:
     - Each agent speaks at least twice (A2A Debate)

@@ -437,16 +437,16 @@ def _generate_macro_summary(ticker: str, metrics: Dict[str, float]) -> str:
     """Generate human-readable macro summary."""
     momentum = metrics.get("market_momentum", 0.5)
     volatility = metrics.get("implied_volatility", 15.0)
-    
+
     if momentum > 0.6:
         tone = "Favorable"
     elif momentum < 0.4:
         tone = "Unfavorable"
     else:
         tone = "Stable"
-        
+
     vol_text = "high volatility" if volatility > 20 else "moderate volatility"
-    
+
     return f"{tone} macroeconomic environment with {vol_text} expected for {ticker}."
 
 
@@ -485,11 +485,15 @@ def _valuation_to_recommendation(metrics: Dict[str, float], peer_comparison: Dic
 def _macro_to_recommendation(metrics: Dict[str, float]) -> str:
     """Convert macro metrics to recommendation."""
     momentum = metrics.get("market_momentum", 0.5)
-    
-    if momentum > 0.6:
-        return "buy"
-    elif momentum < 0.4:
+    vix = metrics.get("vix", 20.0)
+    yield_10y = metrics.get("treasury_yield_10y", 4.5)
+
+    # High volatility and high yields are negative for equities
+    if vix > 30 or yield_10y > 5.5 or momentum < 0.4:
         return "reduce"
+    # Low volatility and supportive yields along with good momentum are positive
+    elif vix < 20 and yield_10y < 4.5 and momentum > 0.6:
+        return "buy"
     else:
         return "hold"
 

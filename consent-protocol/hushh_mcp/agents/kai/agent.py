@@ -16,6 +16,7 @@ from hushh_mcp.types import UserID
 # Import tools
 from .tools import (
     perform_fundamental_analysis,
+    perform_macro_analysis,
     perform_sentiment_analysis,
     perform_valuation_analysis,
 )
@@ -40,6 +41,7 @@ class KaiAgent(HushhAgent):
                 perform_fundamental_analysis,
                 perform_sentiment_analysis,
                 perform_valuation_analysis,
+                perform_macro_analysis,
             ],
             required_scopes=self.manifest.required_scopes,
         )

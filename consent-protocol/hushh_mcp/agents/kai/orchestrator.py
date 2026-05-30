@@ -36,7 +36,7 @@ class KaiOrchestrator(HushhAgent):
     """
     Main Kai Orchestrator - Coordinates entire analysis pipeline.
 
-    ADK-compliant implementation that orchestrates the 3 specialist agents.
+    ADK-compliant implementation that orchestrates the 4 specialist agents.
 
     Usage:
         orchestrator = KaiOrchestrator(

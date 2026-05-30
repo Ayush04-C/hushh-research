@@ -307,8 +307,8 @@ def calculate_macro_metrics(
     if not market_data:
         return {
             "implied_volatility": vix,
-            "market_momentum": 0.5,       # Neutral
-            "rate_sensitivity": 1.0,      # Neutral beta
+            "market_momentum": 0.5,  # Neutral
+            "rate_sensitivity": 1.0,  # Neutral beta
             "vix": vix,
             "treasury_yield_10y": treasury_yield_10y,
         }

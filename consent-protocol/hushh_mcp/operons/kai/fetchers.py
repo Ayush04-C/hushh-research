@@ -1668,6 +1668,10 @@ async def fetch_macro_indicators(
             allow_slow_fallbacks=False,
         )
         raw_yield = float(tnx_data.get("price") or 0)
+        # Handle Yahoo Finance scaling issue (reports 44.5 instead of 4.45)
+        if raw_yield > 20.0:
+            raw_yield /= 10.0
+            
         if raw_yield > 0:
             treasury_yield_10y = raw_yield
             yield_source = str(tnx_data.get("source") or "Yahoo Finance")

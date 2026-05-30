@@ -28,6 +28,10 @@ class MacroInsight:
     confidence: float
     recommendation: str  # "buy", "hold", "reduce"
     sources: List[str]
+    vix_value: Optional[float] = None
+    tnx_value: Optional[float] = None
+    vix_source: Optional[str] = None
+    yield_source: Optional[str] = None
 
 
 class MacroAgent(HushhAgent):
@@ -120,9 +124,7 @@ class MacroAgent(HushhAgent):
                     )
                     break
                 except Exception as e:
-                    logger.warning(
-                        f"[Macro] Gemini analysis failed (attempt {attempt + 1}/2): {e}"
-                    )
+                    logger.warning(f"[Macro] Gemini analysis failed (attempt {attempt + 1}/2): {e}")
                     if attempt == 1:
                         logger.warning(
                             "[Macro] Max retries reached. Falling back to deterministic."
@@ -131,22 +133,28 @@ class MacroAgent(HushhAgent):
         # Use Gemini results if available
         if gemini_analysis and "error" not in gemini_analysis:
             logger.info(f"[Macro] Using Gemini analysis for {ticker}")
-            
+
             summary = gemini_analysis.get("summary")
             if not summary:
                 # If the LLM returned JSON but missed the summary key, dump the whole response for debugging
                 summary = f"Macro analysis completed (Missing summary key). Raw output keys: {list(gemini_analysis.keys())}"
-                
+
             return MacroInsight(
                 summary=summary,
                 interest_rate_impact=gemini_analysis.get("interest_rate_impact", "Neutral"),
                 inflation_impact=gemini_analysis.get("inflation_impact", "Neutral"),
                 sector_trend=gemini_analysis.get("sector_trend", "Neutral"),
-                macro_bull_case=gemini_analysis.get("macro_bull_case", "Favorable economic conditions."),
+                macro_bull_case=gemini_analysis.get(
+                    "macro_bull_case", "Favorable economic conditions."
+                ),
                 macro_bear_case=gemini_analysis.get("macro_bear_case", "Economic headwinds."),
                 confidence=float(gemini_analysis.get("confidence", 0.70)),
                 recommendation=gemini_analysis.get("recommendation", "hold").lower(),
                 sources=["Gemini Macro-Economic Model"],
+                vix_value=macro_indicators.get("vix"),
+                tnx_value=macro_indicators.get("treasury_yield_10y"),
+                vix_source=macro_indicators.get("vix_source"),
+                yield_source=macro_indicators.get("yield_source"),
             )
 
         # Fallback: Deterministic analysis
@@ -164,14 +172,22 @@ class MacroAgent(HushhAgent):
 
             return MacroInsight(
                 summary=analysis.get("summary", f"Deterministic macro analysis for {ticker}."),
-                interest_rate_impact=analysis.get("interest_rate_impact", "Unknown due to missing data."),
+                interest_rate_impact=analysis.get(
+                    "interest_rate_impact", "Unknown due to missing data."
+                ),
                 inflation_impact=analysis.get("inflation_impact", "Unknown due to missing data."),
                 sector_trend=analysis.get("sector_trend", "Market-wide correlation assumed."),
-                macro_bull_case=analysis.get("macro_bull_case", "Broad market recovery lifts all assets."),
+                macro_bull_case=analysis.get(
+                    "macro_bull_case", "Broad market recovery lifts all assets."
+                ),
                 macro_bear_case=analysis.get("macro_bear_case", "Systemic shock risks."),
                 confidence=float(analysis.get("confidence", 0.40)),
                 recommendation=analysis.get("recommendation", "hold").lower(),
                 sources=["Deterministic Fallback"],
+                vix_value=macro_indicators.get("vix"),
+                tnx_value=macro_indicators.get("treasury_yield_10y"),
+                vix_source=macro_indicators.get("vix_source"),
+                yield_source=macro_indicators.get("yield_source"),
             )
         except Exception as e:
             logger.error(f"[Macro] Deterministic analysis failed: {e}")

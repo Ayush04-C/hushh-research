@@ -276,6 +276,10 @@ By using Kai, you acknowledge that you understand these limitations.
                 "interest_rate_impact": macro.interest_rate_impact,
                 "inflation_impact": macro.inflation_impact,
                 "sector_trend": macro.sector_trend,
+                "vix_value": getattr(macro, "vix_value", None),
+                "tnx_value": getattr(macro, "tnx_value", None),
+                "vix_source": getattr(macro, "vix_source", None),
+                "yield_source": getattr(macro, "yield_source", None),
             },
         }
 

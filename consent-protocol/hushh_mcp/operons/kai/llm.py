@@ -832,7 +832,9 @@ async def analyze_macro_with_gemini(
     10-Year Treasury Yield: {treasury_yield_10y:.2f}%  (source: {yield_source})
 """
     else:
-        live_macro_block = "\n    [Live Macro Indicators]\n    Data unavailable — reason from model priors.\n"
+        live_macro_block = (
+            "\n    [Live Macro Indicators]\n    Data unavailable — reason from model priors.\n"
+        )
 
     context = f"""
     --- MACRO ANALYSIS TERMINAL ({ticker}) ---

@@ -1389,13 +1389,14 @@ async def analyze_stream_generator(
                 "message": f"🧠 Starting analysis pipeline for {ticker}...",
                 "tokens": [
                     "Activating",
-                    "three",
+                    "four",
                     "specialist",
                     "agents:",
                     "Fundamental,",
                     "Sentiment,",
+                    "Valuation,",
                     "and",
-                    "Valuation.",
+                    "Macro.",
                 ],
             },
         )
@@ -1410,16 +1411,13 @@ async def analyze_stream_generator(
                 "tokens": [
                     "Fundamental:",
                     "SEC",
-                    "filings,",
-                    "financial",
-                    "ratios.",
+                    "filings.",
                     "Sentiment:",
-                    "news,",
-                    "catalysts.",
+                    "news.",
                     "Valuation:",
-                    "P/E,",
-                    "DCF",
                     "models.",
+                    "Macro:",
+                    "rates.",
                 ],
             },
         )
@@ -1438,17 +1436,7 @@ async def analyze_stream_generator(
                 "phase": "analysis",
             },
         )
-        yield create_event(
-            "agent_start",
-            {
-                "agent": "macro",
-                "agent_name": "Macro Agent",
-                "color": "#f59e0b",
-                "message": f"Analyzing macroeconomic factors for {ticker}...",
-                "round": 1,
-                "phase": "analysis",
-            },
-        )
+
         yield create_event(
             "agent_start",
             {
@@ -1472,7 +1460,6 @@ async def analyze_stream_generator(
             },
         )
 
-        # Parallelize the sequential agent calls to reduce 'Time-To-First-Token' for the debate engine.
         yield create_event(
             "agent_start",
             {
@@ -1484,6 +1471,8 @@ async def analyze_stream_generator(
                 "phase": "analysis",
             },
         )
+
+        # Parallelize the sequential agent calls to reduce 'Time-To-First-Token' for the debate engine.
 
         concurrent_results = await asyncio.gather(
             asyncio.wait_for(

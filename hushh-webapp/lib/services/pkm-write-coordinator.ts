@@ -214,20 +214,20 @@ async function ensureWritableVersion(params: {
     upgraded: true,
     upgradeContext: refreshedStatus?.run?.runId
       ? {
-          runId: refreshedStatus.run.runId,
-          priorDomainContractVersion:
-            domainStatus?.currentDomainContractVersion || manifestContractVersion || undefined,
-          newDomainContractVersion:
-            upgradedDomain?.targetDomainContractVersion ||
-            domainStatus?.targetDomainContractVersion ||
-            currentDomainContractVersion(params.domain),
-          priorReadableSummaryVersion:
-            domainStatus?.currentReadableSummaryVersion || manifestReadableVersion || undefined,
-          newReadableSummaryVersion:
-            upgradedDomain?.targetReadableSummaryVersion ||
-            domainStatus?.targetReadableSummaryVersion ||
-            CURRENT_READABLE_SUMMARY_VERSION,
-        }
+        runId: refreshedStatus.run.runId,
+        priorDomainContractVersion:
+          domainStatus?.currentDomainContractVersion || manifestContractVersion || undefined,
+        newDomainContractVersion:
+          upgradedDomain?.targetDomainContractVersion ||
+          domainStatus?.targetDomainContractVersion ||
+          currentDomainContractVersion(params.domain),
+        priorReadableSummaryVersion:
+          domainStatus?.currentReadableSummaryVersion || manifestReadableVersion || undefined,
+        newReadableSummaryVersion:
+          upgradedDomain?.targetReadableSummaryVersion ||
+          domainStatus?.targetReadableSummaryVersion ||
+          CURRENT_READABLE_SUMMARY_VERSION,
+      }
       : undefined,
   };
 }

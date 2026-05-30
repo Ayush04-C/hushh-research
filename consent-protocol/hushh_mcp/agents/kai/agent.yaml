@@ -71,6 +71,11 @@ tools:
     required_scope: attr.financial.*
     description: quantitative valuation models (DCF, Comps).
 
+  - name: perform_macro_analysis
+    py_func: hushh_mcp.agents.kai.tools.perform_macro_analysis
+    required_scope: attr.financial.*
+    description: Analyze macro-economic factors (Interest Rates, Inflation, Sector Trends).
+
 inputs:
   - name: user_id
     type: string
