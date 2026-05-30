@@ -22,6 +22,7 @@ from hushh_mcp.types import UserID
 from .calculators import (
     assess_fundamental_health,
     calculate_financial_ratios,
+    calculate_macro_metrics,
     calculate_sentiment_score,
     extract_catalysts_from_news,
 )
@@ -240,6 +241,77 @@ def analyze_valuation(
 
 
 # ============================================================================
+# OPERON: analyze_macro
+# ============================================================================
+
+
+def analyze_macro(
+    ticker: str,
+    user_id: UserID,
+    market_data: Dict[str, Any],
+    consent_token: str,
+) -> Dict[str, Any]:
+    """
+    Operon: Perform deterministic macro analysis.
+
+    TrustLink Required: agent.kai.analyze
+
+    Args:
+        ticker: Stock ticker symbol
+        user_id: User ID for audit
+        market_data: Market snapshot
+        consent_token: Valid consent token
+
+    Returns:
+        Dict with macro analysis fallback insights:
+        - summary: Text summary
+        - interest_rate_impact: Interest rate environment analysis
+        - inflation_impact: Inflation impact analysis
+        - sector_trend: Sector momentum analysis
+        - macro_bull_case: Bullish macro arguments
+        - macro_bear_case: Bearish macro arguments
+        - confidence: Confidence score (0-1)
+        - recommendation: "buy", "hold", or "reduce"
+        - macro_metrics: Dictionary of calculated quantitative macro metrics
+
+    Raises:
+        PermissionError: If TrustLink validation fails
+    """
+    # Validate TrustLink
+    valid, reason, token = validate_token(consent_token, ConsentScope("agent.kai.analyze"))
+
+    if not valid:
+        logger.error(f"[Macro Operon] TrustLink validation failed: {reason}")
+        raise PermissionError(f"TrustLink validation failed: {reason}")
+
+    if token.user_id != user_id:
+        raise PermissionError("Token user mismatch")
+
+    logger.info(f"[Macro Operon] Analyzing macro for {ticker} for user {user_id}")
+
+    # Calculate metrics
+    metrics = calculate_macro_metrics(market_data)
+
+    # Generate summary
+    summary = _generate_macro_summary(ticker, metrics)
+
+    # Determine recommendation
+    recommendation = _macro_to_recommendation(metrics)
+
+    return {
+        "summary": summary,
+        "interest_rate_impact": "Neutral (Deterministic Fallback)",
+        "inflation_impact": "Neutral (Deterministic Fallback)",
+        "sector_trend": "Market-wide correlation assumed.",
+        "macro_bull_case": "Broad market recovery lifts all assets.",
+        "macro_bear_case": "Systemic shock risks.",
+        "confidence": 0.40,
+        "recommendation": recommendation,
+        "macro_metrics": metrics,
+    }
+
+
+# ============================================================================
 # PRIVATE HELPER FUNCTIONS
 # ============================================================================
 
@@ -293,6 +365,23 @@ def _generate_valuation_summary(
         return f"Fair valuation at {pe_ratio:.1f}x P/E"
 
 
+def _generate_macro_summary(ticker: str, metrics: Dict[str, float]) -> str:
+    """Generate human-readable macro summary."""
+    momentum = metrics.get("market_momentum", 0.5)
+    volatility = metrics.get("implied_volatility", 15.0)
+    
+    if momentum > 0.6:
+        tone = "Favorable"
+    elif momentum < 0.4:
+        tone = "Unfavorable"
+    else:
+        tone = "Stable"
+        
+    vol_text = "high volatility" if volatility > 20 else "moderate volatility"
+    
+    return f"{tone} macroeconomic environment with {vol_text} expected for {ticker}."
+
+
 def _fundamental_to_recommendation(health_score: float, metrics: Dict) -> str:
     """Convert fundamental health score to recommendation."""
     if health_score > 0.7:
@@ -320,6 +409,18 @@ def _valuation_to_recommendation(metrics: Dict[str, float], peer_comparison: Dic
     if vs_peers == "undervalued":
         return "buy"
     elif vs_peers == "overvalued":
+        return "reduce"
+    else:
+        return "hold"
+
+
+def _macro_to_recommendation(metrics: Dict[str, float]) -> str:
+    """Convert macro metrics to recommendation."""
+    momentum = metrics.get("market_momentum", 0.5)
+    
+    if momentum > 0.6:
+        return "buy"
+    elif momentum < 0.4:
         return "reduce"
     else:
         return "hold"

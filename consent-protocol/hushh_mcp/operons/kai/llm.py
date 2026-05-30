@@ -787,6 +787,93 @@ highlights={json.dumps(highlights[:24], default=str)[:4000]}
 
 
 # ============================================================================
+# MACRO LLM ANALYSIS
+# ============================================================================
+
+
+async def analyze_macro_with_gemini(
+    ticker: str,
+    user_id: UserID,
+    consent_token: str,
+    market_data: Optional[Dict[str, Any]] = None,
+    user_context: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """
+    Operon: Deep macro analysis using Gemini.
+
+    Validates: agent.kai.analyze
+    Context: Market snapshot
+    """
+    valid, reason, token = validate_token(consent_token, ConsentScope("agent.kai.analyze"))
+    if not valid:
+        logger.error(f"[Gemini Operon] Permission denied for macro: {reason}")
+        raise PermissionError(f"Gemini macro analysis denied: {reason}")
+
+    if not _require_gemini_ready():
+        return _gemini_unavailable_payload("Gemini unavailable")
+
+    logger.info(f"[Gemini Operon] Starting macro session for {ticker}")
+
+    user_risk = user_context.get("risk_tolerance", "Balanced") if user_context else "Balanced"
+    horizon = user_context.get("time_horizon", "Unknown") if user_context else "Unknown"
+
+    context = f"""
+    --- MACRO ANALYSIS TERMINAL ({ticker}) ---
+    
+    [Market Snapshot]
+    Current Price: {market_data.get("price", "N/A") if market_data else "N/A"}
+    Day Change %: {market_data.get("change_percent", market_data.get("change_pct", "N/A")) if market_data else "N/A"}
+    Volume: {market_data.get("volume", "N/A") if market_data else "N/A"}
+    Market Cap: {market_data.get("market_cap", "N/A") if market_data else "N/A"}
+    Sector: {market_data.get("sector", "Unknown") if market_data else "Unknown"}
+    Beta: {market_data.get("beta", "Unknown") if market_data else "Unknown"}
+    
+    [Investor Profile]
+    Risk Tolerance: {user_risk}
+    Time Horizon: {horizon}
+    """
+
+    system_instruction = """
+You are a **Chief Macro-Economic Strategist** at a Top-Tier Hedge Fund.
+Your mission is to evaluate broader economic conditions (interest rates, inflation, sector rotation, systemic risk) and their direct impact on this specific asset.
+
+### REPORT STRUCTURE (Strict JSON)
+- `summary`: (String) 1-paragraph summary of macro impact on this stock
+- `interest_rate_impact`: (String) How current/projected rates affect their cost of capital or consumer demand
+- `inflation_impact`: (String) How inflation affects their margins/pricing power
+- `sector_trend`: (String) Overall macro flow into or out of their sector
+- `macro_bull_case`: (String) The best-case macro tailwind
+- `macro_bear_case`: (String) The worst-case macro headwind
+- `confidence`: (Float 0.0-1.0)
+- `recommendation`: (String: "buy", "hold", "reduce" based solely on macro)
+
+### RULES
+- Focus on actionable insights, not generic observations.
+- Tailor the response to the user's risk tolerance and time horizon.
+- Use plain investor language and avoid internal system jargon.
+- DO NOT use markdown inside JSON strings.
+"""
+
+    try:
+        text = await _generate_content_text(
+            prompt=f"{system_instruction}\n\nCONTEXT:\n{context}",
+            timeout_seconds=45.0,
+            max_output_tokens=16384,
+            response_mime_type="application/json",
+        )
+        parsed = _extract_json(text)
+        if not parsed:
+            raise ValueError("Empty or invalid JSON from macro analysis")
+        return parsed
+    except Exception as err:
+        logger.warning("[Kai LLM] Macro analysis failed for %s: %s", ticker, err)
+        return {
+            "error": f"LLM_MACRO_FAILED: {err}",
+            "fallback": True,
+        }
+
+
+# ============================================================================
 # STREAMING GENERATORS - Real-time Token Streaming
 # ============================================================================
 

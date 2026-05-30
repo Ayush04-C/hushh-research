@@ -277,6 +277,53 @@ def calculate_valuation_metrics(market_data: Dict[str, Any]) -> Dict[str, float]
 
 
 # ============================================================================
+# MACRO CALCULATORS
+# ============================================================================
+
+
+def calculate_macro_metrics(market_data: Dict[str, Any]) -> Dict[str, float]:
+    """
+    Calculate baseline macro metrics from market data context.
+
+    Args:
+        market_data: Current market snapshot
+
+    Returns:
+        Dict of baseline macro indicators
+    """
+    if not market_data:
+        return {
+            "implied_volatility": 15.0,  # Default average
+            "market_momentum": 0.5,      # Neutral
+            "rate_sensitivity": 1.0,     # Neutral beta
+        }
+    
+    # Estimate beta/rate sensitivity
+    beta = market_data.get("beta", 1.0)
+    
+    # Estimate momentum based on moving averages or price
+    price = market_data.get("price", 0)
+    ma50 = market_data.get("fifty_day_average", price)
+    
+    momentum = 0.5
+    if price > 0 and ma50 > 0:
+        ratio = price / ma50
+        if ratio > 1.05:
+            momentum = 0.8
+        elif ratio < 0.95:
+            momentum = 0.2
+            
+    # Proxy volatility using beta * baseline VIX (15.0)
+    implied_vol = 15.0 * beta
+    
+    return {
+        "implied_volatility": max(min(implied_vol, 50.0), 10.0),
+        "market_momentum": momentum,
+        "rate_sensitivity": beta,
+    }
+
+
+# ============================================================================
 # RETURN & VOLATILITY CALCULATORS (AlphaAgents Paper Section 2.2.3)
 # ============================================================================
 
