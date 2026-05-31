@@ -1,7 +1,7 @@
 """
 Agent Kai — Debate Engine
 
-Orchestrates round-robin debate between 3 specialist agents to reach consensus.
+Orchestrates round-robin debate between 4 specialist agents to reach consensus.
 
 Key Responsibilities:
 - Multi-agent debate orchestration
@@ -41,6 +41,7 @@ from .config import (
     RiskProfile,
 )
 from .fundamental_agent import FundamentalInsight
+from .macro_agent import MacroInsight
 from .sentiment_agent import SentimentInsight
 from .valuation_agent import ValuationInsight
 
@@ -115,7 +116,7 @@ class DebateResult:
 
 class DebateEngine:
     """
-    Debate Engine - Orchestrates 3-agent discussion with Real-Time Streaming.
+    Debate Engine - Orchestrates 4-agent discussion with Real-Time Streaming.
 
     Implements the AlphaAgents framework:
     - Each agent speaks at least twice (A2A Debate)
@@ -149,6 +150,7 @@ class DebateEngine:
         fundamental_insight: FundamentalInsight,
         sentiment_insight: SentimentInsight,
         valuation_insight: ValuationInsight,
+        macro_insight: MacroInsight,
         user_context: Optional[Dict[str, Any]] = None,
     ) -> AsyncGenerator[Dict[str, Any], DebateResult]:
         """
@@ -176,6 +178,7 @@ class DebateEngine:
             "fundamental": fundamental_insight,
             "sentiment": sentiment_insight,
             "valuation": valuation_insight,
+            "macro": macro_insight,
         }
         self.user_context = user_context or {}
 
@@ -200,6 +203,7 @@ class DebateEngine:
             "fundamental": self._build_deterministic_statement("fundamental", fundamental_insight),
             "sentiment": self._build_deterministic_statement("sentiment", sentiment_insight),
             "valuation": self._build_deterministic_statement("valuation", valuation_insight),
+            "macro": self._build_deterministic_statement("macro", macro_insight),
         }
         self.current_statements.update(round1_statements)
         yield {
@@ -312,6 +316,35 @@ class DebateEngine:
             self._build_deterministic_statement("valuation", valuation_insight),
         )
 
+        if self._disconnection_event and self._disconnection_event.is_set():
+            return
+
+        # Agent 4: Macro Rebuttal
+        yield {
+            "event": "kai_thinking",
+            "data": {
+                "phase": "round2",
+                "message": "Macro Agent is evaluating systemic risks...",
+                "tokens": [
+                    "Factoring",
+                    "in",
+                    "broader",
+                    "economic",
+                    "tailwinds",
+                    "and",
+                    "headwinds.",
+                ],
+            },
+        }
+        async for event in self._stream_agent_turn(
+            2, "macro", "challenge_positions", round2_statements
+        ):
+            yield event
+        round2_statements["macro"] = self.current_statements.get(
+            "macro",
+            self._build_deterministic_statement("macro", macro_insight),
+        )
+
         # Record Round 2
         self.rounds.append(DebateRound(2, round2_statements, datetime.utcnow()))
         yield {
@@ -338,6 +371,7 @@ class DebateEngine:
         fundamental_insight: FundamentalInsight,
         sentiment_insight: SentimentInsight,
         valuation_insight: ValuationInsight,
+        macro_insight: MacroInsight,
         user_context: Optional[Dict[str, Any]] = None,
     ) -> DebateResult:
         """
@@ -351,6 +385,7 @@ class DebateEngine:
             fundamental_insight=fundamental_insight,
             sentiment_insight=sentiment_insight,
             valuation_insight=valuation_insight,
+            macro_insight=macro_insight,
             user_context=user_context,
         ):
             pass
@@ -359,6 +394,7 @@ class DebateEngine:
             fundamental=fundamental_insight,
             sentiment=sentiment_insight,
             valuation=valuation_insight,
+            macro=macro_insight,
         )
 
     async def _stream_agent_turn(
@@ -385,6 +421,7 @@ class DebateEngine:
             "fundamental": "Fundamental Agent",
             "sentiment": "Sentiment Agent",
             "valuation": "Valuation Agent",
+            "macro": "Macro Agent",
         }
         phase = "round2" if round_num == 2 else "round1"
 
@@ -737,6 +774,14 @@ class DebateEngine:
             )
             details = f"Your Analysis:\n- Recommendation: {insight.recommendation}\n- Summary: {insight.summary}"
 
+        elif agent == "macro":
+            role_desc = (
+                "You are 'The Economist' (Macro Analyst). "
+                "You look at inflation, interest rates, and broad sector trends. "
+                "You care about systemic risks and tailwinds."
+            )
+            details = f"Your Analysis:\n- Recommendation: {insight.recommendation}\n- Summary: {insight.summary}"
+
         else:  # sentiment
             role_desc = (
                 "You are 'The Trader' (Sentiment Analyst). "
@@ -1022,6 +1067,7 @@ class DebateEngine:
         fundamental: FundamentalInsight,
         sentiment: SentimentInsight,
         valuation: ValuationInsight,
+        macro: MacroInsight,
     ) -> DebateResult:
         """Build consensus from agent insights (Unchanged logic)."""
 
@@ -1030,10 +1076,13 @@ class DebateEngine:
             "fundamental": self._recommendation_to_decision(fundamental.recommendation),
             "sentiment": self._recommendation_to_decision(sentiment.recommendation),
             "valuation": self._recommendation_to_decision(valuation.recommendation),
+            "macro": self._recommendation_to_decision(macro.recommendation),
         }
 
         # Calculate weighted decision
-        decision, confidence = self._calculate_weighted_decision(fundamental, sentiment, valuation)
+        decision, confidence = self._calculate_weighted_decision(
+            fundamental, sentiment, valuation, macro
+        )
 
         # Check for consensus
         unique_votes = set(agent_votes.values())
@@ -1058,6 +1107,7 @@ class DebateEngine:
                 fundamental,
                 sentiment,
                 valuation,
+                macro,
             )
             if conflict_summary:
                 dissenting_opinions.append(conflict_summary)
@@ -1091,6 +1141,7 @@ class DebateEngine:
         fundamental: FundamentalInsight,
         sentiment: SentimentInsight,
         valuation: ValuationInsight,
+        macro: MacroInsight,
     ) -> tuple[DecisionType, float]:
         """Calculate weighted decision based on risk profile."""
         # Convert recommendations to numeric scores
@@ -1098,6 +1149,7 @@ class DebateEngine:
             "fundamental": self._rec_to_score(fundamental.recommendation),
             "sentiment": self._rec_to_score(sentiment.recommendation),
             "valuation": self._rec_to_score(valuation.recommendation),
+            "macro": self._rec_to_score(macro.recommendation),
         }
 
         # Calculate weighted score
@@ -1105,6 +1157,7 @@ class DebateEngine:
             scores["fundamental"] * self.agent_weights["fundamental"]
             + scores["sentiment"] * self.agent_weights["sentiment"]
             + scores["valuation"] * self.agent_weights["valuation"]
+            + scores["macro"] * self.agent_weights["macro"]
         )
         weighted_score += self._context_score_shift(scores)
         weighted_score = max(-1.0, min(1.0, weighted_score))
@@ -1114,6 +1167,7 @@ class DebateEngine:
             fundamental.confidence * self.agent_weights["fundamental"]
             + sentiment.confidence * self.agent_weights["sentiment"]
             + valuation.confidence * self.agent_weights["valuation"]
+            + macro.confidence * self.agent_weights["macro"]
         )
         weighted_confidence = max(0.0, min(1.0, weighted_confidence))
 
@@ -1186,12 +1240,14 @@ class DebateEngine:
         fundamental: FundamentalInsight,
         sentiment: SentimentInsight,
         valuation: ValuationInsight,
+        macro: MacroInsight,
     ) -> Optional[str]:
         """Summarize the strongest disagreement without changing the final decision."""
         insights = {
             "fundamental": fundamental,
             "sentiment": sentiment,
             "valuation": valuation,
+            "macro": macro,
         }
         scores = {
             agent_id: self._rec_to_score(insight.recommendation)
@@ -1234,7 +1290,7 @@ class DebateEngine:
     def _summarize_conflict_evidence(
         self,
         agent_id: str,
-        insight: FundamentalInsight | SentimentInsight | ValuationInsight,
+        insight: FundamentalInsight | SentimentInsight | ValuationInsight | MacroInsight,
     ) -> str:
         text = self.current_statements.get(agent_id) or insight.summary or "No summary provided."
         text = " ".join(str(text).split())

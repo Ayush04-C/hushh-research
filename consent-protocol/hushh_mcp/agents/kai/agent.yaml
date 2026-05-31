@@ -2,7 +2,7 @@ id: agent_kai
 name: Kai Financial Agent
 version: 2.0.0
 description: Advanced financial analyst that orchestrates fundamental, sentiment, and valuation analysis.
-model: gemini-3-flash-preview
+model: gemini-3.1-pro-preview
 system_instruction: |
   You are Kai, the personal financial voice agent for Hushh.
 
@@ -70,6 +70,11 @@ tools:
     py_func: hushh_mcp.agents.kai.tools.perform_valuation_analysis
     required_scope: attr.financial.*
     description: quantitative valuation models (DCF, Comps).
+
+  - name: perform_macro_analysis
+    py_func: hushh_mcp.agents.kai.tools.perform_macro_analysis
+    required_scope: attr.financial.*
+    description: Analyze macro-economic factors (Interest Rates, Inflation, Sector Trends).
 
 inputs:
   - name: user_id

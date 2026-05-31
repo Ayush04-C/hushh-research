@@ -20,6 +20,7 @@ from typing import Any, Dict, List
 from .config import DecisionType, RiskProfile
 from .debate_engine import DebateResult
 from .fundamental_agent import FundamentalInsight
+from .macro_agent import MacroInsight
 from .sentiment_agent import SentimentInsight
 from .valuation_agent import ValuationInsight
 
@@ -50,6 +51,7 @@ class DecisionCard:
     fundamental_insight: Dict[str, Any]
     sentiment_insight: Dict[str, Any]
     valuation_insight: Dict[str, Any]
+    macro_insight: Dict[str, Any]
 
     # Debate details
     debate_digest: str
@@ -104,6 +106,7 @@ By using Kai, you acknowledge that you understand these limitations.
         fundamental_insight: FundamentalInsight,
         sentiment_insight: SentimentInsight,
         valuation_insight: ValuationInsight,
+        macro_insight: MacroInsight,
         debate_result: DebateResult,
         user_id: str,
         consent_token: str | None = None,
@@ -125,6 +128,7 @@ By using Kai, you acknowledge that you understand these limitations.
             fundamental=fundamental_insight,
             sentiment=sentiment_insight,
             valuation=valuation_insight,
+            macro=macro_insight,
             debate=debate_result,
         )
 
@@ -136,6 +140,7 @@ By using Kai, you acknowledge that you understand these limitations.
         fundamental: FundamentalInsight,
         sentiment: SentimentInsight,
         valuation: ValuationInsight,
+        macro: MacroInsight,
         debate: DebateResult,
     ) -> DecisionCard:
         """
@@ -148,6 +153,7 @@ By using Kai, you acknowledge that you understand these limitations.
             fundamental: Fundamental agent's insight
             sentiment: Sentiment agent's insight
             valuation: Valuation agent's insight
+            macro: Macro agent's insight
             debate: Debate engine result
 
         Returns:
@@ -164,10 +170,10 @@ By using Kai, you acknowledge that you understand these limitations.
         debate_digest = self._create_debate_digest(debate)
 
         # Collect all sources
-        all_sources = self._collect_sources(fundamental, sentiment, valuation)
+        all_sources = self._collect_sources(fundamental, sentiment, valuation, macro)
 
         # Aggregate key metrics
-        key_metrics = self._aggregate_metrics(fundamental, sentiment, valuation)
+        key_metrics = self._aggregate_metrics(fundamental, sentiment, valuation, macro)
 
         # Generate risk persona alignment note
         risk_alignment = self._generate_risk_alignment(debate.decision, debate.confidence)
@@ -177,6 +183,7 @@ By using Kai, you acknowledge that you understand these limitations.
             fundamental.confidence,
             sentiment.confidence,
             valuation.confidence,
+            macro.confidence,
         )
 
         return DecisionCard(
@@ -190,6 +197,7 @@ By using Kai, you acknowledge that you understand these limitations.
             fundamental_insight=asdict(fundamental),
             sentiment_insight=asdict(sentiment),
             valuation_insight=asdict(valuation),
+            macro_insight=asdict(macro),
             debate_digest=debate_digest,
             debate_rounds=[asdict(r) for r in debate.rounds],
             consensus_reached=debate.consensus_reached,
@@ -239,12 +247,14 @@ By using Kai, you acknowledge that you understand these limitations.
         fundamental: FundamentalInsight,
         sentiment: SentimentInsight,
         valuation: ValuationInsight,
+        macro: MacroInsight,
     ) -> List[str]:
         """Collect all sources from agents."""
         sources = []
         sources.extend(fundamental.sources)
         sources.extend(sentiment.sources)
         sources.extend(valuation.sources)
+        sources.extend(macro.sources)
         return list(set(sources))  # Deduplicate
 
     def _aggregate_metrics(
@@ -252,6 +262,7 @@ By using Kai, you acknowledge that you understand these limitations.
         fundamental: FundamentalInsight,
         sentiment: SentimentInsight,
         valuation: ValuationInsight,
+        macro: MacroInsight,
     ) -> Dict[str, Any]:
         """Aggregate key metrics from all agents."""
         return {
@@ -261,6 +272,15 @@ By using Kai, you acknowledge that you understand these limitations.
                 "catalyst_count": len(sentiment.key_catalysts),
             },
             "valuation": valuation.valuation_metrics,
+            "macro": {
+                "interest_rate_impact": macro.interest_rate_impact,
+                "inflation_impact": macro.inflation_impact,
+                "sector_trend": macro.sector_trend,
+                "vix_value": getattr(macro, "vix_value", None),
+                "tnx_value": getattr(macro, "tnx_value", None),
+                "vix_source": getattr(macro, "vix_source", None),
+                "yield_source": getattr(macro, "yield_source", None),
+            },
         }
 
     def _generate_risk_alignment(self, decision: DecisionType, confidence: float) -> str:
@@ -291,10 +311,11 @@ By using Kai, you acknowledge that you understand these limitations.
         fund_conf: float,
         sent_conf: float,
         val_conf: float,
+        macro_conf: float,
     ) -> str:
         """Calculate reliability badge based on agent confidence."""
 
-        avg_confidence = (fund_conf + sent_conf + val_conf) / 3
+        avg_confidence = (fund_conf + sent_conf + val_conf + macro_conf) / 4
 
         if avg_confidence >= 0.80:
             return "🟢 High Reliability"

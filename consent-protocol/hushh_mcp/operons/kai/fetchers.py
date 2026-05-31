@@ -1570,3 +1570,143 @@ async def fetch_peer_data(
         requested_peers=len(peer_universe),
     )
     return quotes
+
+
+# ============================================================================
+# OPERON: fetch_macro_indicators
+# ============================================================================
+
+
+async def fetch_macro_indicators(
+    user_id: UserID,
+    consent_token: str | None = None,
+) -> Dict[str, Any]:
+    """
+    Operon: Fetch live macroeconomic indicators (VIX, 10-Year Treasury yield).
+
+    Reuses the existing market-data provider pipeline — no new API keys or
+    providers are required.  ^VIX and ^TNX are standard Yahoo Finance symbols
+    served by the same caching and cooldown infrastructure used for equities.
+
+    TrustLink Required: agent.kai.analyze
+
+    Args:
+        user_id: User ID for audit logging
+        consent_token: Valid consent token
+
+    Returns:
+        Dict with:
+        - vix: Current CBOE Volatility Index level (float, e.g. 18.5)
+        - treasury_yield_10y: Current 10-Year Treasury yield in % (float, e.g. 4.35)
+        - vix_source: Provider label for VIX
+        - yield_source: Provider label for yield
+        - fetched_at: ISO timestamp
+
+    Note:
+        This operon never raises on indicator-level failures.  When a symbol
+        is temporarily unavailable, a market-average default is used so the
+        Macro Agent analysis pipeline is never blocked by supplemental data.
+
+    Raises:
+        PermissionError: If TrustLink validation fails
+    """
+    if consent_token:
+        valid, reason, token = validate_token(
+            consent_token,
+            ConsentScope("agent.kai.analyze"),
+        )
+        if not valid:
+            logger.error("[Macro Indicators Fetcher] TrustLink validation failed: %s", reason)
+            raise PermissionError(f"Macro indicators access denied: {reason}")
+        if token.user_id != user_id:
+            raise PermissionError("Token user mismatch")
+
+    logger.info(
+        "[Macro Indicators Fetcher] Fetching VIX and 10Y Treasury yield for user %s", user_id
+    )
+
+    _VIX_SYMBOL = "^VIX"
+    _TNX_SYMBOL = "^TNX"
+
+    # Market-average defaults used when live fetch is unavailable.
+    vix: float = 20.0
+    treasury_yield_10y: float = 4.5
+    vix_source: str = "default"
+    yield_source: str = "default"
+
+    started_at = time.perf_counter()
+
+    try:
+        vix_data = await fetch_market_data(
+            _VIX_SYMBOL,
+            user_id,
+            consent_token,
+            allow_slow_fallbacks=False,
+        )
+        raw_vix = float(vix_data.get("price") or 0)
+        if raw_vix > 0:
+            vix = raw_vix
+            vix_source = str(vix_data.get("source") or "Yahoo Finance")
+            logger.info("[Macro Indicators Fetcher] VIX=%.2f from %s", vix, vix_source)
+    except Exception as vix_err:
+        logger.warning(
+            "[Macro Indicators Fetcher] VIX unavailable, using default %.1f: %s",
+            vix,
+            vix_err,
+        )
+        _emit_realtime_telemetry(
+            "macro_indicator_failure",
+            symbol=_VIX_SYMBOL,
+            error=str(vix_err)[:200],
+        )
+
+    try:
+        tnx_data = await fetch_market_data(
+            _TNX_SYMBOL,
+            user_id,
+            consent_token,
+            allow_slow_fallbacks=False,
+        )
+        raw_yield = float(tnx_data.get("price") or 0)
+        # Handle Yahoo Finance scaling issue (reports 44.5 instead of 4.45)
+        if raw_yield > 20.0:
+            raw_yield /= 10.0
+
+        if raw_yield > 0:
+            treasury_yield_10y = raw_yield
+            yield_source = str(tnx_data.get("source") or "Yahoo Finance")
+            logger.info(
+                "[Macro Indicators Fetcher] 10Y Yield=%.2f%% from %s",
+                treasury_yield_10y,
+                yield_source,
+            )
+    except Exception as tnx_err:
+        logger.warning(
+            "[Macro Indicators Fetcher] 10Y Treasury yield unavailable, using default %.1f%%: %s",
+            treasury_yield_10y,
+            tnx_err,
+        )
+        _emit_realtime_telemetry(
+            "macro_indicator_failure",
+            symbol=_TNX_SYMBOL,
+            error=str(tnx_err)[:200],
+        )
+
+    payload: Dict[str, Any] = {
+        "vix": vix,
+        "treasury_yield_10y": treasury_yield_10y,
+        "vix_source": vix_source,
+        "yield_source": yield_source,
+        "fetched_at": datetime.utcnow().isoformat(),
+    }
+
+    _emit_realtime_telemetry(
+        "macro_indicators_fetch_complete",
+        vix=vix,
+        treasury_yield_10y=treasury_yield_10y,
+        vix_source=vix_source,
+        yield_source=yield_source,
+        duration_ms=int((time.perf_counter() - started_at) * 1000),
+    )
+
+    return payload
