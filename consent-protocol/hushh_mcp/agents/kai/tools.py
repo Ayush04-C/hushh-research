@@ -14,7 +14,6 @@ from hushh_mcp.hushh_adk.tools import hushh_tool
 # Import the existing "Agents" which we are now treating as "Analysis Engines"
 # We backed them up, but we'll use the ones in the current directory as library code.
 from .fundamental_agent import fundamental_agent as fundamental_engine
-from .macro_agent import macro_agent as macro_engine
 from .sentiment_agent import sentiment_agent as sentiment_engine
 from .valuation_agent import valuation_agent as valuation_engine
 
@@ -104,33 +103,3 @@ async def perform_valuation_analysis(ticker: str) -> Dict[str, Any]:
         }
     except Exception as e:
         return {"error": f"Valuation analysis failed: {str(e)}"}
-
-
-@hushh_tool(scope=ConsentScope.AGENT_KAI_ANALYZE, name="perform_macro_analysis")
-async def perform_macro_analysis(ticker: str) -> Dict[str, Any]:
-    """
-    Perform macro-economic analysis (Interest Rates, Inflation, Sector Trends).
-    """
-    ctx = HushhContext.current()
-    if not ctx:
-        raise PermissionError("No active context")
-
-    print(f"🔧 Tool invoked: perform_macro_analysis for {ticker}")
-
-    try:
-        insight = await macro_engine.analyze(
-            ticker=ticker, user_id=ctx.user_id, consent_token=ctx.consent_token
-        )
-
-        return {
-            "summary": insight.summary,
-            "interest_rate_impact": insight.interest_rate_impact,
-            "inflation_impact": insight.inflation_impact,
-            "sector_trend": insight.sector_trend,
-            "macro_bull_case": insight.macro_bull_case,
-            "macro_bear_case": insight.macro_bear_case,
-            "recommendation": insight.recommendation,
-            "confidence": insight.confidence,
-        }
-    except Exception as e:
-        return {"error": f"Macro analysis failed: {str(e)}"}

@@ -25,7 +25,6 @@ from .config import ANALYSIS_TIMEOUT, ProcessingMode, RiskProfile
 from .debate_engine import DebateEngine
 from .decision_generator import DecisionCard, DecisionGenerator
 from .fundamental_agent import FundamentalAgent
-from .macro_agent import MacroAgent
 from .sentiment_agent import SentimentAgent
 from .valuation_agent import ValuationAgent
 
@@ -36,7 +35,7 @@ class KaiOrchestrator(HushhAgent):
     """
     Main Kai Orchestrator - Coordinates entire analysis pipeline.
 
-    ADK-compliant implementation that orchestrates the 4 specialist agents.
+    ADK-compliant implementation that orchestrates the 3 specialist agents.
 
     Usage:
         orchestrator = KaiOrchestrator(
@@ -65,11 +64,10 @@ class KaiOrchestrator(HushhAgent):
             name="Kai Orchestrator",
             model=GEMINI_MODEL,  # Standardized model
             system_prompt="""
-            You are the Kai Orchestrator, coordinating 4 specialist agents:
+            You are the Kai Orchestrator, coordinating 3 specialist agents:
             - Fundamental Analyst (blue)
             - Sentiment Analyst (purple) 
             - Valuation Expert (green)
-            - Macro Analyst (amber)
             
             Your job is to orchestrate their analysis and generate a final investment decision.
             """,
@@ -80,7 +78,6 @@ class KaiOrchestrator(HushhAgent):
         self.fundamental_agent = FundamentalAgent(processing_mode)
         self.sentiment_agent = SentimentAgent(processing_mode)
         self.valuation_agent = ValuationAgent(processing_mode)
-        self.macro_agent = MacroAgent(processing_mode)
         self.debate_engine = DebateEngine(risk_profile)
         self.decision_generator = DecisionGenerator(risk_profile)
 
@@ -117,7 +114,7 @@ class KaiOrchestrator(HushhAgent):
 
         try:
             # Step 2: Run parallel agent analysis
-            fundamental, sentiment, valuation, macro = await asyncio.wait_for(
+            fundamental, sentiment, valuation = await asyncio.wait_for(
                 self._run_agent_analysis(ticker, consent_token, context), timeout=ANALYSIS_TIMEOUT
             )
 
@@ -126,7 +123,6 @@ class KaiOrchestrator(HushhAgent):
                 fundamental_insight=fundamental,
                 sentiment_insight=sentiment,
                 valuation_insight=valuation,
-                macro_insight=macro,
             )
 
             # Step 4: Generate final decision card
@@ -135,7 +131,6 @@ class KaiOrchestrator(HushhAgent):
                 fundamental_insight=fundamental,
                 sentiment_insight=sentiment,
                 valuation_insight=valuation,
-                macro_insight=macro,
                 debate_result=debate_result,
                 user_id=self.user_id,
                 consent_token=consent_token,
@@ -169,7 +164,7 @@ class KaiOrchestrator(HushhAgent):
     async def _run_agent_analysis(
         self, ticker: str, consent_token: str, context: Optional[Dict[str, Any]] = None
     ):
-        """Run all 4 agents in parallel."""
+        """Run all 3 agents in parallel."""
         # Create tasks for parallel execution
         fundamental_task = self.fundamental_agent.analyze(
             ticker=ticker, user_id=self.user_id, consent_token=consent_token, context=context
@@ -183,13 +178,9 @@ class KaiOrchestrator(HushhAgent):
             ticker=ticker, user_id=self.user_id, consent_token=consent_token, context=context
         )
 
-        macro_task = self.macro_agent.analyze(
-            ticker=ticker, user_id=self.user_id, consent_token=consent_token, context=context
-        )
-
         # Execute in parallel and return results
         results = await asyncio.gather(
-            fundamental_task, sentiment_task, valuation_task, macro_task, return_exceptions=True
+            fundamental_task, sentiment_task, valuation_task, return_exceptions=True
         )
 
         # Fix #411: collect ALL failures first so none are silently dropped.
