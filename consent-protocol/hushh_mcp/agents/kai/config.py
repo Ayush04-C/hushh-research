@@ -29,22 +29,19 @@ CONSENSUS_THRESHOLD = 0.70  # 70% agreement for consensus
 # Agent weights by risk profile
 AGENT_WEIGHTS = {
     "conservative": {
-        "fundamental": 0.40,  # Strong emphasis on fundamentals
-        "sentiment": 0.10,  # Low weight on sentiment
-        "valuation": 0.25,  # Moderate valuation focus
-        "macro": 0.25,  # High macro sensitivity
+        "fundamental": 0.50,  # Strong emphasis on fundamentals
+        "sentiment": 0.20,  # Low weight on sentiment
+        "valuation": 0.30,  # Moderate valuation focus
     },
     "balanced": {
-        "fundamental": 0.30,
-        "sentiment": 0.25,
-        "valuation": 0.25,
-        "macro": 0.20,
+        "fundamental": 0.35,
+        "sentiment": 0.30,
+        "valuation": 0.35,
     },
     "aggressive": {
-        "fundamental": 0.20,  # Lower fundamental weight
-        "sentiment": 0.40,  # High sentiment weight (momentum)
-        "valuation": 0.25,
-        "macro": 0.15,  # Lower macro focus, high momentum
+        "fundamental": 0.25,  # Lower fundamental weight
+        "sentiment": 0.45,  # High sentiment weight (momentum)
+        "valuation": 0.30,
     },
 }
 
