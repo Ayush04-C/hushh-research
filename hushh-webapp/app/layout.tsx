@@ -7,6 +7,7 @@ import { RootLayoutClient } from "./layout-client";
 import {
   resolveAnalyticsMeasurementId,
   resolveGtmContainerId,
+  shouldLoadWebAnalyticsScripts,
 } from "@/lib/observability/env";
 
 const geistSans = Geist({
@@ -29,6 +30,7 @@ const headingSans = Inter({
 
 const gtmContainerId = resolveGtmContainerId();
 const analyticsMeasurementId = resolveAnalyticsMeasurementId();
+const loadWebAnalyticsScripts = shouldLoadWebAnalyticsScripts();
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://hushh.ai"),
@@ -106,7 +108,7 @@ export default function RootLayout({
             background-image: none !important;
           }
         `}</style>
-        {analyticsMeasurementId ? (
+        {loadWebAnalyticsScripts && analyticsMeasurementId ? (
           <>
             <Script
               id="ga-base"
@@ -122,7 +124,7 @@ export default function RootLayout({
             />
           </>
         ) : null}
-        {gtmContainerId ? (
+        {loadWebAnalyticsScripts && gtmContainerId ? (
           <Script
             id="gtm-base"
             strategy="afterInteractive"
