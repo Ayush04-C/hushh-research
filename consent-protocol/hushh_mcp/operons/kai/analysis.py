@@ -22,7 +22,6 @@ from hushh_mcp.types import UserID
 from .calculators import (
     assess_fundamental_health,
     calculate_financial_ratios,
-    calculate_macro_metrics,
     calculate_sentiment_score,
     extract_catalysts_from_news,
 )
@@ -241,145 +240,6 @@ def analyze_valuation(
 
 
 # ============================================================================
-# OPERON: analyze_macro
-# ============================================================================
-
-
-def analyze_macro(
-    ticker: str,
-    user_id: UserID,
-    market_data: Dict[str, Any],
-    consent_token: str,
-    macro_indicators: Dict[str, Any] | None = None,
-) -> Dict[str, Any]:
-    """
-    Operon: Perform deterministic macro analysis.
-
-    TrustLink Required: agent.kai.analyze
-
-    Args:
-        ticker: Stock ticker symbol
-        user_id: User ID for audit
-        market_data: Market snapshot
-        consent_token: Valid consent token
-        macro_indicators: Live macro indicators from fetch_macro_indicators()
-                          (vix, treasury_yield_10y). When None, proxy values are
-                          used so existing callers continue to work unchanged.
-
-    Returns:
-        Dict with macro analysis fallback insights:
-        - summary: Text summary
-        - interest_rate_impact: Interest rate environment analysis
-        - inflation_impact: Inflation impact analysis
-        - sector_trend: Sector momentum analysis
-        - macro_bull_case: Bullish macro arguments
-        - macro_bear_case: Bearish macro arguments
-        - confidence: Confidence score (0-1)
-        - recommendation: "buy", "hold", or "reduce"
-        - macro_metrics: Dictionary of calculated quantitative macro metrics
-
-    Raises:
-        PermissionError: If TrustLink validation fails
-    """
-    # Validate TrustLink
-    valid, reason, token = validate_token(consent_token, ConsentScope("agent.kai.analyze"))
-
-    if not valid:
-        logger.error(f"[Macro Operon] TrustLink validation failed: {reason}")
-        raise PermissionError(f"TrustLink validation failed: {reason}")
-
-    if token.user_id != user_id:
-        raise PermissionError("Token user mismatch")
-
-    logger.info(f"[Macro Operon] Analyzing macro for {ticker} for user {user_id}")
-
-    # Calculate metrics — pass live indicators so VIX and yield replace proxy values.
-    metrics = calculate_macro_metrics(market_data, macro_indicators)
-
-    # Generate summary
-    summary = _generate_macro_summary(ticker, metrics)
-
-    # Determine recommendation
-    recommendation = _macro_to_recommendation(metrics)
-
-    # Generate data-driven narrative fields from live VIX and Treasury yield.
-    # When live data is unavailable the defaults (vix=20, yield=4.5) still produce
-    # reasonable text rather than generic placeholder strings.
-    vix = metrics.get("vix", 20.0)
-    yield_10y = metrics.get("treasury_yield_10y", 4.5)
-    sector = (market_data or {}).get("sector", "the sector")
-
-    if yield_10y > 5.0:
-        interest_rate_impact = (
-            f"High 10-Year Treasury yield ({yield_10y:.2f}%) significantly pressures "
-            f"growth multiples and raises the cost of capital for {ticker}."
-        )
-    elif yield_10y > 4.0:
-        interest_rate_impact = (
-            f"Elevated 10-Year Treasury yield ({yield_10y:.2f}%) creates a moderate headwind "
-            f"for rate-sensitive equities including {ticker}."
-        )
-    else:
-        interest_rate_impact = (
-            f"Moderate 10-Year Treasury yield ({yield_10y:.2f}%) is broadly supportive "
-            f"of equity valuations and {ticker}'s cost of capital."
-        )
-
-    if vix > 30:
-        inflation_impact = (
-            f"Elevated market volatility (VIX={vix:.1f}) suggests broad risk-off conditions "
-            f"that may compress {ticker}'s multiple regardless of inflation dynamics."
-        )
-    elif vix > 20:
-        inflation_impact = (
-            f"Moderate volatility (VIX={vix:.1f}) indicates uncertain macro conditions. "
-            f"Inflation risk may still pressure {ticker}'s input costs and margins."
-        )
-    else:
-        inflation_impact = (
-            f"Low volatility environment (VIX={vix:.1f}) is consistent with stable inflation "
-            f"expectations, reducing near-term margin pressure for {ticker}."
-        )
-
-    if vix > 25:
-        sector_trend = (
-            f"High VIX ({vix:.1f}) signals broad risk-off rotation that typically weighs on "
-            f"{sector} equities in the near term."
-        )
-    elif metrics.get("market_momentum", 0.5) > 0.6:
-        sector_trend = (
-            f"Positive price momentum with contained volatility (VIX={vix:.1f}) suggests "
-            f"supportive macro flows for {sector}."
-        )
-    else:
-        sector_trend = (
-            f"Neutral macro backdrop (VIX={vix:.1f}) with no clear sector rotation signal "
-            f"for {sector}."
-        )
-
-    macro_bull_case = (
-        f"Treasury yields stabilize or decline from {yield_10y:.2f}%, reducing discount-rate "
-        f"pressure and supporting a multiple re-rating for {ticker}."
-    )
-    macro_bear_case = (
-        f"VIX sustains above 25 or 10-Year yields breach {yield_10y + 0.5:.2f}%, "
-        f"compressing multiples and triggering risk-off selling in {sector}."
-    )
-
-    return {
-        "summary": summary,
-        "interest_rate_impact": interest_rate_impact,
-        "inflation_impact": inflation_impact,
-        "sector_trend": sector_trend,
-        "macro_bull_case": macro_bull_case,
-        "macro_bear_case": macro_bear_case,
-        "confidence": 0.40,
-        "recommendation": recommendation,
-        "macro_metrics": metrics,
-    }
-
-
-# ============================================================================
 # PRIVATE HELPER FUNCTIONS
 # ============================================================================
 
@@ -433,23 +293,6 @@ def _generate_valuation_summary(
         return f"Fair valuation at {pe_ratio:.1f}x P/E"
 
 
-def _generate_macro_summary(ticker: str, metrics: Dict[str, float]) -> str:
-    """Generate human-readable macro summary."""
-    momentum = metrics.get("market_momentum", 0.5)
-    volatility = metrics.get("implied_volatility", 15.0)
-
-    if momentum > 0.6:
-        tone = "Favorable"
-    elif momentum < 0.4:
-        tone = "Unfavorable"
-    else:
-        tone = "Stable"
-
-    vol_text = "high volatility" if volatility > 20 else "moderate volatility"
-
-    return f"{tone} macroeconomic environment with {vol_text} expected for {ticker}."
-
-
 def _fundamental_to_recommendation(health_score: float, metrics: Dict) -> str:
     """Convert fundamental health score to recommendation."""
     if health_score > 0.7:
@@ -478,22 +321,6 @@ def _valuation_to_recommendation(metrics: Dict[str, float], peer_comparison: Dic
         return "buy"
     elif vs_peers == "overvalued":
         return "reduce"
-    else:
-        return "hold"
-
-
-def _macro_to_recommendation(metrics: Dict[str, float]) -> str:
-    """Convert macro metrics to recommendation."""
-    momentum = metrics.get("market_momentum", 0.5)
-    vix = metrics.get("vix", 20.0)
-    yield_10y = metrics.get("treasury_yield_10y", 4.5)
-
-    # High volatility and high yields are negative for equities
-    if vix > 30 or yield_10y > 5.5 or momentum < 0.4:
-        return "reduce"
-    # Low volatility and supportive yields along with good momentum are positive
-    elif vix < 20 and yield_10y < 4.5 and momentum > 0.6:
-        return "buy"
     else:
         return "hold"
 

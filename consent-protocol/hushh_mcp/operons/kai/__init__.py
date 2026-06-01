@@ -11,7 +11,6 @@ Operons are the building blocks of Agent Kai's analysis pipeline.
 
 from .analysis import (
     analyze_fundamentals,
-    analyze_macro,
     analyze_sentiment,
     analyze_valuation,
 )
@@ -23,11 +22,10 @@ from .brokerage import (
 )
 from .calculators import (
     calculate_financial_ratios,
-    calculate_macro_metrics,
     calculate_sentiment_score,
     calculate_valuation_metrics,
 )
-from .llm import analyze_macro_with_gemini, analyze_stock_with_gemini
+from .llm import analyze_stock_with_gemini
 from .storage import (
     retrieve_decision_card,
     retrieve_decision_history,
@@ -37,11 +35,9 @@ from .storage import (
 __all__ = [
     # Analysis operons
     "analyze_fundamentals",
-    "analyze_macro",
     "analyze_sentiment",
     "analyze_valuation",
     "analyze_stock_with_gemini",
-    "analyze_macro_with_gemini",
     # Brokerage operons
     "build_brokerage_holdings_context",
     "summarize_brokerage_activity",
@@ -49,7 +45,6 @@ __all__ = [
     "prepare_order_intent",
     # Calculator operons
     "calculate_financial_ratios",
-    "calculate_macro_metrics",
     "calculate_sentiment_score",
     "calculate_valuation_metrics",
     # Storage operons
