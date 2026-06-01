@@ -7,7 +7,13 @@ import Link from "next/link";
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import type { ReadonlyURLSearchParams } from "next/navigation";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Building2, ExternalLink, Search, ShieldCheck, UserRound } from "lucide-react";
+import {
+  Building2,
+  ExternalLink,
+  Search,
+  ShieldCheck,
+  UserRound,
+} from "lucide-react";
 import { MaterialRipple } from "@/lib/morphy-ux/material-ripple";
 
 import {
@@ -41,6 +47,11 @@ import {
   resolveConsentRequesterLabel,
   resolveConsentSupportingCopy,
 } from "@/lib/consent/consent-display";
+import {
+  emailHelperConsentSummary,
+  emailHelperWorkflowHref,
+  isEmailHelperConsent,
+} from "@/lib/consent/email-helper-consent";
 import { normalizeInternalAppHref } from "@/lib/consent/consent-sheet-route";
 import { usePersonaState } from "@/lib/persona/persona-context";
 import {
@@ -75,7 +86,9 @@ function normalizeTab(value: string | null): ConsentTab {
   return "requests";
 }
 
-function normalizeNotificationAction(value: string | null): PendingNotificationAction {
+function normalizeNotificationAction(
+  value: string | null,
+): PendingNotificationAction {
   if (value === "review" || value === "approve" || value === "deny") {
     return value;
   }
@@ -84,12 +97,14 @@ function normalizeNotificationAction(value: string | null): PendingNotificationA
 
 function normalizeActor(
   value: string | null,
-  fallback: ConsentCenterActor
+  fallback: ConsentCenterActor,
 ): ConsentCenterActor {
   return value === "ria" || value === "investor" ? value : fallback;
 }
 
-function resolveConsentTab(searchParams: URLSearchParams | ReadonlyURLSearchParams): ConsentTab {
+function resolveConsentTab(
+  searchParams: URLSearchParams | ReadonlyURLSearchParams,
+): ConsentTab {
   const tabParam = searchParams.get("tab");
   if (tabParam) {
     return normalizeTab(tabParam);
@@ -153,6 +168,9 @@ function badgeClassName(status?: string | null) {
 }
 
 function entrySummary(entry: ConsentCenterEntry) {
+  if (isEmailHelperConsent(entry.metadata)) {
+    return emailHelperConsentSummary(entry.metadata);
+  }
   return resolveConsentSupportingCopy({
     scope: entry.scope,
     scopeDescription: entry.scope_description,
@@ -172,7 +190,11 @@ function relationshipSortValue(entry: ConsentCenterEntry) {
 }
 
 function relationshipPriority(entry: ConsentCenterEntry) {
-  if (entry.kind === "active_grant" || entry.status === "active" || entry.status === "approved") {
+  if (
+    entry.kind === "active_grant" ||
+    entry.status === "active" ||
+    entry.status === "approved"
+  ) {
     return 3;
   }
   if (
@@ -189,7 +211,9 @@ function relationshipPriority(entry: ConsentCenterEntry) {
   return 0;
 }
 
-function buildRelationshipEntries(center: ConsentCenterResponse | null): ConsentCenterEntry[] {
+function buildRelationshipEntries(
+  center: ConsentCenterResponse | null,
+): ConsentCenterEntry[] {
   if (!center) return [];
 
   const grouped = new Map<string, ConsentCenterEntry[]>();
@@ -202,8 +226,7 @@ function buildRelationshipEntries(center: ConsentCenterResponse | null): Consent
   ];
 
   for (const entry of sourceEntries) {
-    const counterpartKey =
-      `${entry.counterpart_type}:${entry.counterpart_id || entry.counterpart_email || entry.counterpart_label || entry.id}`;
+    const counterpartKey = `${entry.counterpart_type}:${entry.counterpart_id || entry.counterpart_email || entry.counterpart_label || entry.id}`;
     const bucket = grouped.get(counterpartKey) || [];
     bucket.push(entry);
     grouped.set(counterpartKey, bucket);
@@ -211,30 +234,40 @@ function buildRelationshipEntries(center: ConsentCenterResponse | null): Consent
 
   const resolved: ConsentCenterEntry[] = [];
   for (const [key, entries] of grouped.entries()) {
-      const sorted = [...entries].sort((left, right) => {
-        const priorityDelta = relationshipPriority(right) - relationshipPriority(left);
-        if (priorityDelta !== 0) return priorityDelta;
-        return relationshipSortValue(right) - relationshipSortValue(left);
-      });
-      const primary = sorted[0];
-      if (!primary) continue;
-      const scopeLabels = Array.from(
-        new Set(entries.map((entry) => entry.scope_description || entry.scope).filter(Boolean))
-      );
-      resolved.push({
-        ...primary,
-        id: `relationship:${key}`,
-        additional_access_summary:
-          scopeLabels.length > 0
-            ? `${scopeLabels.length} scope${scopeLabels.length === 1 ? "" : "s"} shared in this relationship`
-            : primary.additional_access_summary,
-      });
+    const sorted = [...entries].sort((left, right) => {
+      const priorityDelta =
+        relationshipPriority(right) - relationshipPriority(left);
+      if (priorityDelta !== 0) return priorityDelta;
+      return relationshipSortValue(right) - relationshipSortValue(left);
+    });
+    const primary = sorted[0];
+    if (!primary) continue;
+    const scopeLabels = Array.from(
+      new Set(
+        entries
+          .map((entry) => entry.scope_description || entry.scope)
+          .filter(Boolean),
+      ),
+    );
+    resolved.push({
+      ...primary,
+      id: `relationship:${key}`,
+      additional_access_summary:
+        scopeLabels.length > 0
+          ? `${scopeLabels.length} scope${scopeLabels.length === 1 ? "" : "s"} shared in this relationship`
+          : primary.additional_access_summary,
+    });
   }
 
-  return resolved.sort((left, right) => relationshipSortValue(right) - relationshipSortValue(left));
+  return resolved.sort(
+    (left, right) => relationshipSortValue(right) - relationshipSortValue(left),
+  );
 }
 
-function filterRelationshipEntries(entries: ConsentCenterEntry[], query: string): ConsentCenterEntry[] {
+function filterRelationshipEntries(
+  entries: ConsentCenterEntry[],
+  query: string,
+): ConsentCenterEntry[] {
   const normalizedQuery = query.trim().toLowerCase();
   if (!normalizedQuery) return entries;
   return entries.filter((entry) => {
@@ -266,7 +299,8 @@ function resolveCounterpartLabel(entry: ConsentCenterEntry) {
 }
 
 function toPendingConsent(entry: ConsentCenterEntry): PendingConsent {
-  const issuedAt = typeof entry.issued_at === "number" ? entry.issued_at : Date.now();
+  const issuedAt =
+    typeof entry.issued_at === "number" ? entry.issued_at : Date.now();
   const approvalTimeoutAt =
     typeof entry.approval_timeout_at === "number"
       ? entry.approval_timeout_at
@@ -293,7 +327,12 @@ function toPendingConsent(entry: ConsentCenterEntry): PendingConsent {
 }
 
 function ConsentCounterpartAvatar({ entry }: { entry: ConsentCenterEntry }) {
-  const kind = entry.counterpart_type === "ria" ? "ria" : entry.counterpart_type === "developer" ? "developer" : "investor";
+  const kind =
+    entry.counterpart_type === "ria"
+      ? "ria"
+      : entry.counterpart_type === "developer"
+        ? "developer"
+        : "investor";
   const Icon = kind === "ria" ? Building2 : UserRound;
   const label = resolveCounterpartLabel(entry);
   const initials = label
@@ -310,7 +349,7 @@ function ConsentCounterpartAvatar({ entry }: { entry: ConsentCenterEntry }) {
           ? "border-sky-500/15 bg-sky-500/6 text-sky-700"
           : kind === "developer"
             ? "border-violet-500/15 bg-violet-500/6 text-violet-700"
-            : "border-emerald-500/15 bg-emerald-500/6 text-emerald-700"
+            : "border-emerald-500/15 bg-emerald-500/6 text-emerald-700",
       )}
     >
       {initials ? (
@@ -339,7 +378,7 @@ function ConsentEntryRow({
         "relative w-full overflow-hidden rounded-[var(--app-card-radius-compact)] border px-4 py-3 text-left transition-colors",
         selected
           ? "border-sky-500/24 bg-sky-500/7"
-          : "border-[color:var(--app-card-border-standard)]/50 bg-[color:var(--app-card-surface-compact)]/55 hover:bg-[color:var(--app-card-surface-compact)]"
+          : "border-[color:var(--app-card-border-standard)]/50 bg-[color:var(--app-card-surface-compact)]/55 hover:bg-[color:var(--app-card-surface-compact)]",
       )}
     >
       <div className="flex items-start gap-3">
@@ -349,19 +388,32 @@ function ConsentEntryRow({
             <p className="truncate text-sm font-semibold text-foreground">
               {resolveCounterpartLabel(entry)}
             </p>
-            <Badge className={cn("shrink-0 capitalize", badgeClassName(entry.status))}>
+            <Badge
+              className={cn(
+                "shrink-0 capitalize",
+                badgeClassName(entry.status),
+              )}
+            >
               {formatStatus(entry.status)}
             </Badge>
           </div>
           <p className="truncate text-xs text-muted-foreground">
-            {entry.counterpart_email || entry.counterpart_secondary_label || "Hussh connection"}
+            {entry.counterpart_email ||
+              entry.counterpart_secondary_label ||
+              "Hussh connection"}
           </p>
         </div>
       </div>
-      <p className="mt-3 line-clamp-2 text-sm leading-6 text-foreground/80">{entrySummary(entry)}</p>
+      <p className="mt-3 line-clamp-2 text-sm leading-6 text-foreground/80">
+        {entrySummary(entry)}
+      </p>
       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-        {entry.scope ? <span>{entry.scope_description || entry.scope}</span> : null}
-        {entry.expires_at ? <span>{formatRelative(entry.expires_at)}</span> : null}
+        {entry.scope ? (
+          <span>{entry.scope_description || entry.scope}</span>
+        ) : null}
+        {entry.expires_at ? (
+          <span>{formatRelative(entry.expires_at)}</span>
+        ) : null}
         {entry.issued_at ? <span>{formatDate(entry.issued_at)}</span> : null}
       </div>
       <MaterialRipple variant="none" effect="fade" className="z-0" />
@@ -389,7 +441,10 @@ function ConsentEntryDetail({
         title="Select a request"
         description="Choose an item from the list to review its details and available actions."
       >
-        <SettingsRow title="Nothing selected yet" description="Pending, active, and previous items open here." />
+        <SettingsRow
+          title="Nothing selected yet"
+          description="Pending, active, and previous items open here."
+        />
       </SettingsGroup>
     );
   }
@@ -398,6 +453,9 @@ function ConsentEntryDetail({
     actor === "ria" && entry.counterpart_id
       ? buildRiaClientWorkspaceRoute(entry.counterpart_id, { tab: "access" })
       : null;
+  const emailHelperHref = isEmailHelperConsent(entry.metadata)
+    ? normalizeInternalAppHref(emailHelperWorkflowHref(entry.metadata))
+    : null;
 
   return (
     <div className="space-y-4">
@@ -406,10 +464,7 @@ function ConsentEntryDetail({
         title="Request details"
         description={entrySummary(entry)}
       >
-        <SettingsRow
-          title="Status"
-          description={formatStatus(entry.status)}
-        />
+        <SettingsRow title="Status" description={formatStatus(entry.status)} />
         <SettingsRow
           title="Email or identity"
           description={
@@ -420,7 +475,9 @@ function ConsentEntryDetail({
         />
         <SettingsRow
           title="Scope"
-          description={entry.scope ? humanizeConsentScope(entry.scope) : "Not provided"}
+          description={
+            entry.scope ? humanizeConsentScope(entry.scope) : "Not provided"
+          }
         />
         <SettingsRow
           title="Requested at"
@@ -429,13 +486,32 @@ function ConsentEntryDetail({
         <SettingsRow
           title="Expires"
           description={
-            formatDate(entry.expires_at) || formatRelative(entry.expires_at) || "No expiry"
+            formatDate(entry.expires_at) ||
+            formatRelative(entry.expires_at) ||
+            "No expiry"
           }
         />
-        {entry.reason ? <SettingsRow title="Reason" description={entry.reason} /> : null}
+        {entry.reason ? (
+          <SettingsRow title="Reason" description={entry.reason} />
+        ) : null}
+        {emailHelperHref ? (
+          <SettingsRow
+            title="Email reply"
+            description="Review the email request, access approval, and draft in one place."
+            trailing={
+              <Button asChild variant="none" effect="fade" size="sm">
+                <Link href={emailHelperHref}>Open Email</Link>
+              </Button>
+            }
+          />
+        ) : null}
       </SettingsGroup>
 
-      <SettingsGroup embedded title="Actions" description="Only the next relevant actions are shown here.">
+      <SettingsGroup
+        embedded
+        title="Actions"
+        description="Only the next relevant actions are shown here."
+      >
         {entry.kind === "incoming_request" && entry.status === "pending" ? (
           <>
             <SettingsRow
@@ -496,7 +572,10 @@ function ConsentEntryDetail({
             trailing={
               <Button asChild variant="none" effect="fade" size="sm">
                 <Link
-                  href={normalizeInternalAppHref(entry.request_url) || entry.request_url}
+                  href={
+                    normalizeInternalAppHref(entry.request_url) ||
+                    entry.request_url
+                  }
                   data-voice-control-id="consent_open_request"
                 >
                   Open
@@ -527,10 +606,17 @@ function ConsentEntryDetail({
           description="Stable identifiers stay available here without cluttering the primary review flow."
         >
           {entry.technical_identity?.user_id ? (
-            <SettingsRow title="User ID" description={entry.technical_identity.user_id} />
+            <SettingsRow
+              title="User ID"
+              description={entry.technical_identity.user_id}
+            />
           ) : null}
-          {entry.request_id ? <SettingsRow title="Request ID" description={entry.request_id} /> : null}
-          {entry.scope ? <SettingsRow title="Scope code" description={entry.scope} /> : null}
+          {entry.request_id ? (
+            <SettingsRow title="Request ID" description={entry.request_id} />
+          ) : null}
+          {entry.scope ? (
+            <SettingsRow title="Scope code" description={entry.scope} />
+          ) : null}
         </SettingsGroup>
       ) : null}
 
@@ -564,20 +650,23 @@ export function ConsentCenterPage() {
     activeControlId: activeVoiceControlId,
     lastInteractedControlId: lastVoiceControlId,
   } = useVoiceSurfaceControlTracking();
-  const defaultActor: ConsentCenterActor = activePersona === "ria" ? "ria" : "investor";
+  const defaultActor: ConsentCenterActor =
+    activePersona === "ria" ? "ria" : "investor";
   const actor = normalizeActor(searchParams.get("actor"), defaultActor);
   const mode: ConsentManagerMode = "consents";
   const tab = resolveConsentTab(searchParams);
   const managerView: "incoming" | "outgoing" =
-    searchParams.get("view") === "incoming" || searchParams.get("view") === "outgoing"
+    searchParams.get("view") === "incoming" ||
+    searchParams.get("view") === "outgoing"
       ? (searchParams.get("view") as "incoming" | "outgoing")
       : actor === "ria"
         ? "outgoing"
         : "incoming";
   const page = Math.max(1, Number(searchParams.get("page") || "1") || 1);
-  const selectedId = searchParams.get("requestId") || searchParams.get("selected");
+  const selectedId =
+    searchParams.get("requestId") || searchParams.get("selected");
   const notificationAction = normalizeNotificationAction(
-    searchParams.get("notificationAction")
+    searchParams.get("notificationAction"),
   );
   const [searchValue, setSearchValue] = useState(searchParams.get("q") || "");
   const deferredQuery = useDeferredValue(searchValue.trim());
@@ -588,7 +677,8 @@ export function ConsentCenterPage() {
   const summaryCacheKey = user?.uid
     ? CACHE_KEYS.CONSENT_CENTER_SUMMARY(user.uid, `${actor}:${mode}`)
     : "consent_center_summary_guest";
-  const listSurface = tab === "requests" ? "pending" : tab === "history" ? "previous" : "active";
+  const listSurface =
+    tab === "requests" ? "pending" : tab === "history" ? "previous" : "active";
   const listCacheKey = user?.uid
     ? CACHE_KEYS.CONSENT_CENTER_LIST(
         user.uid,
@@ -596,7 +686,7 @@ export function ConsentCenterPage() {
         listSurface,
         deferredQuery,
         page,
-        CONSENT_CENTER_PAGE_SIZE
+        CONSENT_CENTER_PAGE_SIZE,
       )
     : "consent_center_list_guest";
   const [retainedSummary, setRetainedSummary] = useState<{
@@ -620,7 +710,9 @@ export function ConsentCenterPage() {
     const next = new URLSearchParams(searchParams.toString());
     next.delete("mode");
     const query = next.toString();
-    router.replace(query ? `${ROUTES.CONSENTS}?${query}` : ROUTES.CONSENTS, { scroll: false });
+    router.replace(query ? `${ROUTES.CONSENTS}?${query}` : ROUTES.CONSENTS, {
+      scroll: false,
+    });
   }, [router, searchParams]);
 
   useEffect(() => {
@@ -660,7 +752,9 @@ export function ConsentCenterPage() {
   });
 
   const centerResource = useStaleResource({
-    cacheKey: user?.uid ? CACHE_KEYS.CONSENT_CENTER(user.uid, `${actor}:${managerView}`) : "consent_center_guest",
+    cacheKey: user?.uid
+      ? CACHE_KEYS.CONSENT_CENTER(user.uid, `${actor}:${managerView}`)
+      : "consent_center_guest",
     refreshKey: `${actor}:${managerView}:${mutationTick}`,
     enabled: Boolean(user?.uid),
     load: async () => {
@@ -716,32 +810,50 @@ export function ConsentCenterPage() {
     summaryResource.data ??
     (retainedSummary?.key === summaryCacheKey ? retainedSummary.data : null);
   const listData =
-    listResource.data ?? (retainedList?.key === listCacheKey ? retainedList.data : null);
+    listResource.data ??
+    (retainedList?.key === listCacheKey ? retainedList.data : null);
 
   const relationshipItems = useMemo(
-    () => filterRelationshipEntries(buildRelationshipEntries(centerResource.data || null), deferredQuery),
-    [centerResource.data, deferredQuery]
+    () =>
+      filterRelationshipEntries(
+        buildRelationshipEntries(centerResource.data || null),
+        deferredQuery,
+      ),
+    [centerResource.data, deferredQuery],
   );
   const items = useMemo(
     () => (tab === "relationships" ? relationshipItems : listData?.items || []),
-    [listData?.items, relationshipItems, tab]
+    [listData?.items, relationshipItems, tab],
   );
   const activeListError =
     tab === "relationships" ? centerResource.error : listResource.error;
   const activeListLoading =
     tab === "relationships" ? centerResource.loading : listResource.loading;
   const activeListRefreshing =
-    tab === "relationships" ? centerResource.refreshing : listResource.refreshing;
+    tab === "relationships"
+      ? centerResource.refreshing
+      : listResource.refreshing;
   const consentLoadError = activeListError || summaryResource.error;
   const hasVisibleConsentListData =
     items.length > 0 ||
-    (tab === "relationships" ? Boolean(centerResource.data) : Boolean(listData));
-  const showCompactRetryState = Boolean(consentLoadError && hasVisibleConsentListData);
-  const showFullRetryState = Boolean(consentLoadError && !hasVisibleConsentListData);
-  const showSessionRecovery = Boolean(!authLoading && !user && showFullRetryState);
-  const visibleSnapshot = tab === "relationships" ? centerResource.snapshot : listResource.snapshot;
+    (tab === "relationships"
+      ? Boolean(centerResource.data)
+      : Boolean(listData));
+  const showCompactRetryState = Boolean(
+    consentLoadError && hasVisibleConsentListData,
+  );
+  const showFullRetryState = Boolean(
+    consentLoadError && !hasVisibleConsentListData,
+  );
+  const showSessionRecovery = Boolean(
+    !authLoading && !user && showFullRetryState,
+  );
+  const visibleSnapshot =
+    tab === "relationships" ? centerResource.snapshot : listResource.snapshot;
   const isConsentActionRefreshing =
-    summaryResource.refreshing || listResource.refreshing || centerResource.refreshing;
+    summaryResource.refreshing ||
+    listResource.refreshing ||
+    centerResource.refreshing;
   const accessibilityStatusMessage = activeListLoading
     ? "Consent entries are loading."
     : activeListRefreshing
@@ -753,7 +865,9 @@ export function ConsentCenterPage() {
     if (!items.length) return null;
     if (selectedId) {
       return (
-        items.find((item) => item.request_id === selectedId || item.id === selectedId) ??
+        items.find(
+          (item) => item.request_id === selectedId || item.id === selectedId,
+        ) ??
         items[0] ??
         null
       );
@@ -762,7 +876,7 @@ export function ConsentCenterPage() {
   }, [items, selectedId]);
   const selectedPendingConsent = useMemo(
     () => (selectedEntry ? toPendingConsent(selectedEntry) : null),
-    [selectedEntry]
+    [selectedEntry],
   );
   const consentVoiceSurfaceMetadata = useMemo(() => {
     const tabTitle =
@@ -771,7 +885,8 @@ export function ConsentCenterPage() {
       {
         id: "consents.search",
         label: "Search consents",
-        purpose: "Filters the current consent list by name, email, scope, or reason.",
+        purpose:
+          "Filters the current consent list by name, email, scope, or reason.",
         voiceAliases: ["search consents", "filter consents"],
       },
       {
@@ -780,7 +895,8 @@ export function ConsentCenterPage() {
         purpose: "Opens the selected consent request details and next actions.",
         voiceAliases: ["review consent", "open consent details"],
       },
-      ...(selectedEntry?.kind === "incoming_request" && selectedEntry.status === "pending"
+      ...(selectedEntry?.kind === "incoming_request" &&
+      selectedEntry.status === "pending"
         ? [
             {
               id: "consents.approve",
@@ -832,7 +948,8 @@ export function ConsentCenterPage() {
         {
           id: "consent_details",
           title: "Consent details",
-          purpose: "Shows the selected request details and next available actions.",
+          purpose:
+            "Shows the selected request details and next available actions.",
         },
       ],
       actions,
@@ -851,7 +968,8 @@ export function ConsentCenterPage() {
           actionId: "consents.review",
           role: "panel",
         },
-        ...(selectedEntry?.kind === "incoming_request" && selectedEntry.status === "pending"
+        ...(selectedEntry?.kind === "incoming_request" &&
+        selectedEntry.status === "pending"
           ? [
               {
                 id: "consent_approve",
@@ -892,18 +1010,24 @@ export function ConsentCenterPage() {
       ],
       activeSection: tabTitle,
       activeTab: tab,
-      visibleModules: ["Consent manager", tabTitle, ...(selectedEntry ? ["Consent details"] : [])],
+      visibleModules: [
+        "Consent manager",
+        tabTitle,
+        ...(selectedEntry ? ["Consent details"] : []),
+      ],
       focusedWidget: selectedEntry ? "Consent details" : "Consent manager",
       searchQuery: searchValue.trim() || null,
       availableActions: actions.map((action) => action.label),
-      activeControlId: activeVoiceControlId || (selectedEntry ? "consent_detail_panel" : null),
+      activeControlId:
+        activeVoiceControlId || (selectedEntry ? "consent_detail_panel" : null),
       lastInteractedControlId: lastVoiceControlId,
       activeFilters: [actor, managerView].filter(
-        (
-          value
-        ): value is ConsentCenterActor | "incoming" | "outgoing" => Boolean(value)
+        (value): value is ConsentCenterActor | "incoming" | "outgoing" =>
+          Boolean(value),
       ),
-      selectedEntity: selectedEntry ? resolveCounterpartLabel(selectedEntry) : null,
+      selectedEntity: selectedEntry
+        ? resolveCounterpartLabel(selectedEntry)
+        : null,
       busyOperations: [
         ...(summaryResource.loading ? ["consent_summary_load"] : []),
         ...(listResource.loading ? ["consent_list_load"] : []),
@@ -916,7 +1040,8 @@ export function ConsentCenterPage() {
         pending_count: summaryData?.counts.pending ?? 0,
         active_count: summaryData?.counts.active ?? 0,
         previous_count: summaryData?.counts.previous ?? 0,
-        selected_request_id: selectedEntry?.request_id || selectedEntry?.id || null,
+        selected_request_id:
+          selectedEntry?.request_id || selectedEntry?.id || null,
         selected_status: selectedEntry?.status || null,
         selected_scope: selectedEntry?.scope || null,
         detail_open: Boolean(selectedId),
@@ -939,9 +1064,9 @@ export function ConsentCenterPage() {
     summaryData?.counts.active,
     summaryData?.counts.pending,
     summaryData?.counts.previous,
-      summaryResource.loading,
-      tab,
-    ]);
+    summaryResource.loading,
+    tab,
+  ]);
   usePublishVoiceSurfaceMetadata(consentVoiceSurfaceMetadata);
 
   const setParam = (updates: Record<string, string | null>) => {
@@ -954,7 +1079,9 @@ export function ConsentCenterPage() {
       }
     }
     const query = next.toString();
-    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    router.replace(query ? `${pathname}?${query}` : pathname, {
+      scroll: false,
+    });
   };
 
   const pageEyebrow = "Access / Consent";
@@ -981,7 +1108,11 @@ export function ConsentCenterPage() {
           icon={ShieldCheck}
           accent="consent"
           actions={
-            <Badge className={cn("border-sky-500/20 bg-sky-500/10 text-sky-700 dark:text-sky-300")}>
+            <Badge
+              className={cn(
+                "border-sky-500/20 bg-sky-500/10 text-sky-700 dark:text-sky-300",
+              )}
+            >
               {summaryData?.counts.pending ?? 0} pending
             </Badge>
           }
@@ -993,7 +1124,9 @@ export function ConsentCenterPage() {
           <section className="space-y-4" data-testid="consent-manager-primary">
             <SettingsSegmentedTabs
               value={tab}
-              onValueChange={(value) => setParam({ tab: value, page: "1", requestId: null })}
+              onValueChange={(value) =>
+                setParam({ tab: value, page: "1", requestId: null })
+              }
               options={[
                 {
                   value: "requests",
@@ -1038,7 +1171,10 @@ export function ConsentCenterPage() {
                     />
                   </div>
                 ) : null}
-                {((tab === "relationships" ? centerResource.loading || centerResource.refreshing : listResource.loading || listResource.refreshing) && items.length > 0) ? (
+                {(tab === "relationships"
+                  ? centerResource.loading || centerResource.refreshing
+                  : listResource.loading || listResource.refreshing) &&
+                items.length > 0 ? (
                   <div className="mt-3 text-xs text-muted-foreground">
                     Refreshing from the latest consent state…
                   </div>
@@ -1049,7 +1185,9 @@ export function ConsentCenterPage() {
             <section data-testid="consent-manager-list">
               <SettingsGroup embedded>
                 <div className="space-y-2 px-2 py-2">
-                  <AccessibilityStatusAnnouncer message={accessibilityStatusMessage} />
+                  <AccessibilityStatusAnnouncer
+                    message={accessibilityStatusMessage}
+                  />
 
                   {showSessionRecovery ? <SessionExpiryRecovery /> : null}
 
@@ -1078,32 +1216,28 @@ export function ConsentCenterPage() {
                     />
                   ) : null}
 
-                  {listResource.loading && items.length === 0 && !showFullRetryState ? (
+                  {listResource.loading &&
+                  items.length === 0 &&
+                  !showFullRetryState ? (
                     <div className="px-3 py-6 text-sm text-muted-foreground">
                       Loading consent entries…
                     </div>
                   ) : null}
-                  {!listResource.loading && !showFullRetryState && tab !== "relationships" && items.length === 0 ? (
-                    <Card preset="default" effect="glass" className="mx-3 my-6 flex flex-col items-center justify-center p-8 text-center">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[color:var(--app-card-surface-compact)] border border-[color:var(--app-card-border-standard)] mb-4 text-[color:var(--brand-600)]">
-                        <ShieldCheck className="h-6 w-6" />
-                      </div>
-                      <p className="text-[15px] font-semibold tracking-tight text-foreground">Your vault is secure</p>
-                      <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-                        No {tab} match this view. No data is currently shared in this scope. Consent is the key boundary.
-                      </p>
-                    </Card>
+                  {!listResource.loading &&
+                  !showFullRetryState &&
+                  tab !== "relationships" &&
+                  items.length === 0 ? (
+                    <div className="px-3 py-8 text-sm text-muted-foreground">
+                      No {tab} entries match this view right now.
+                    </div>
                   ) : null}
-                  {!centerResource.loading && !showFullRetryState && tab === "relationships" && items.length === 0 ? (
-                    <Card preset="default" effect="glass" className="mx-3 my-6 flex flex-col items-center justify-center p-8 text-center">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[color:var(--app-card-surface-compact)] border border-[color:var(--app-card-border-standard)] mb-4 text-[color:var(--brand-600)]">
-                        <ShieldCheck className="h-6 w-6" />
-                      </div>
-                      <p className="text-[15px] font-semibold tracking-tight text-foreground">No active relationships</p>
-                      <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-                        You have no consent relationships. Your vault remains locked down.
-                      </p>
-                    </Card>
+                  {!centerResource.loading &&
+                  !showFullRetryState &&
+                  tab === "relationships" &&
+                  items.length === 0 ? (
+                    <div className="px-3 py-8 text-sm text-muted-foreground">
+                      No relationship entries match this view right now.
+                    </div>
                   ) : null}
                   {tab === "history" && items.length > 0 ? (
                     <ConsentAuditTimeline
@@ -1118,9 +1252,9 @@ export function ConsentCenterPage() {
                       summarizeEntry={entrySummary}
                     />
                   ) : (
-                    items.map((entry) => (
+                    items.map((entry, index) => (
                       <ConsentEntryRow
-                        key={entry.id}
+                        key={`${entry.kind}-${entry.id}-${entry.request_id || "no-request"}-${index}`}
                         entry={entry}
                         selected={
                           selectedEntry?.id === entry.id ||
@@ -1142,7 +1276,9 @@ export function ConsentCenterPage() {
                     limit={listData.limit}
                     total={listData.total}
                     hasMore={listData.has_more}
-                    onPrevious={() => setParam({ page: String(Math.max(1, page - 1)) })}
+                    onPrevious={() =>
+                      setParam({ page: String(Math.max(1, page - 1)) })
+                    }
                     onNext={() => setParam({ page: String(page + 1) })}
                   />
                 ) : null}
@@ -1156,10 +1292,18 @@ export function ConsentCenterPage() {
         open={Boolean(selectedId)}
         onOpenChange={(open) => {
           if (!open) {
-            setParam({ requestId: null });
+            setParam({
+              requestId: null,
+              selected: null,
+              notificationAction: null,
+            });
           }
         }}
-        title={selectedEntry ? resolveCounterpartLabel(selectedEntry) : "Consent details"}
+        title={
+          selectedEntry
+            ? resolveCounterpartLabel(selectedEntry)
+            : "Consent details"
+        }
         description={
           selectedEntry
             ? `${formatStatus(selectedEntry.status)} request`
@@ -1193,7 +1337,8 @@ export function ConsentCenterPage() {
               }
               trailing={
                 <div className="flex items-center gap-2">
-                  {notificationAction === "approve" && selectedPendingConsent ? (
+                  {notificationAction === "approve" &&
+                  selectedPendingConsent ? (
                     <Button
                       variant="blue-gradient"
                       effect="fill"
@@ -1212,7 +1357,9 @@ export function ConsentCenterPage() {
                       effect="fade"
                       size="sm"
                       onClick={() => {
-                        void handleDeny(selectedEntry.request_id || selectedEntry.id);
+                        void handleDeny(
+                          selectedEntry.request_id || selectedEntry.id,
+                        );
                         setParam({ notificationAction: null });
                       }}
                     >
