@@ -1,3 +1,4 @@
+import { NetworkStatusBanner } from "@/components/system/network-status-banner";
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Inter } from "next/font/google";
 import Script from "next/script";
@@ -6,6 +7,7 @@ import { RootLayoutClient } from "./layout-client";
 import {
   resolveAnalyticsMeasurementId,
   resolveGtmContainerId,
+  shouldLoadWebAnalyticsScripts,
 } from "@/lib/observability/env";
 
 const geistSans = Geist({
@@ -28,6 +30,7 @@ const headingSans = Inter({
 
 const gtmContainerId = resolveGtmContainerId();
 const analyticsMeasurementId = resolveAnalyticsMeasurementId();
+const loadWebAnalyticsScripts = shouldLoadWebAnalyticsScripts();
 
 export const metadata: Metadata = {
   title: {
@@ -49,7 +52,7 @@ export const metadata: Metadata = {
   },
   manifest: "/manifest.webmanifest",
   openGraph: {
-    title: "One: Your Personal Agent",
+    title: "One | Your Personal Agent",
     description: "Personal AI agents with consent at the core.",
     type: "website",
   },
@@ -88,7 +91,7 @@ export default function RootLayout({
             background-image: none !important;
           }
         `}</style>
-        {analyticsMeasurementId ? (
+        {loadWebAnalyticsScripts && analyticsMeasurementId ? (
           <>
             <Script
               id="ga-base"
@@ -104,7 +107,7 @@ export default function RootLayout({
             />
           </>
         ) : null}
-        {gtmContainerId ? (
+        {loadWebAnalyticsScripts && gtmContainerId ? (
           <Script
             id="gtm-base"
             strategy="afterInteractive"
@@ -117,6 +120,7 @@ export default function RootLayout({
       <RootLayoutClient
         fontClasses={`${geistSans.variable} ${geistMono.variable} ${headingSans.variable}`}
       >
+        <NetworkStatusBanner />
         {children}
       </RootLayoutClient>
     </html>
