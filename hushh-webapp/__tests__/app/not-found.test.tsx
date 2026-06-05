@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import AppNotFoundPage from "@/app/not-found";
@@ -9,23 +9,21 @@ vi.mock("@/lib/utils/browser-navigation", () => ({
 }));
 
 describe("AppNotFoundPage", () => {
-  it("renders the visual not found state replacing the silent redirect", () => {
+  it("renders a visible recovery state instead of redirecting silently", () => {
     render(<AppNotFoundPage />);
 
-    // Verify visual recovery card is shown
     expect(screen.getByText("Page not found")).toBeTruthy();
     expect(
-      screen.getByText("The page you're looking for doesn't exist or may have been moved.")
+      screen.getByText("The page you're looking for doesn't exist or may have been moved."),
     ).toBeTruthy();
-    expect(screen.getByRole("button", { name: /Go back/i })).toBeTruthy();
-    expect(screen.getByRole("button", { name: /Go home/i })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /go back/i })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /go home/i })).toBeTruthy();
   });
 
-  it("reconciles navigation with canonical requestInternalAppNavigation", () => {
+  it("routes home through canonical internal navigation", () => {
     render(<AppNotFoundPage />);
 
-    const homeButton = screen.getByRole("button", { name: /Go home/i });
-    fireEvent.click(homeButton);
+    fireEvent.click(screen.getByRole("button", { name: /go home/i }));
 
     expect(BrowserNavigation.requestInternalAppNavigation).toHaveBeenCalledWith({
       href: "/",
@@ -34,12 +32,11 @@ describe("AppNotFoundPage", () => {
     });
   });
 
-  it("handles browser back navigation natively", () => {
-    const backSpy = vi.spyOn(window.history, "back");
+  it("keeps browser back recovery available", () => {
+    const backSpy = vi.spyOn(window.history, "back").mockImplementation(() => {});
     render(<AppNotFoundPage />);
 
-    const backButton = screen.getByRole("button", { name: /Go back/i });
-    fireEvent.click(backButton);
+    fireEvent.click(screen.getByRole("button", { name: /go back/i }));
 
     expect(backSpy).toHaveBeenCalled();
     backSpy.mockRestore();
